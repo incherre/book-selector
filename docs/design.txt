@@ -1,0 +1,27 @@
+Possible Designs:
+
+1) Script + Sheets
+	This design would be a script (or two) that pulls down info from a Google Sheets document, makes a selection, and writes the result back.
+
+	Pros:
+	-No hosting required
+	-Quick to develop
+	-No need to write a UI
+
+	Cons:
+	-Reliant on users keeping the Sheets formatted correctly, etc.
+	-Less freedom to add complex features (example: no natural way to do voting or automatically enforce time limits on the vote)
+	-Must be run manually each month
+
+2) Full web app
+	This design would be a web app, possibly built from scratch, possibly on an existing framework, that handles all aspects of the book selection problem.
+
+	Pros:
+	-Complete freedom to add complex features
+	-Input validation
+
+	Cons:
+	-Requires hosting
+	-Longer to develop
+
+3) ???
