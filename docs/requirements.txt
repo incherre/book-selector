@@ -5,19 +5,18 @@ Essential Features:
 
 -System periodically (fairly) selects 4 books from personal lists
 	-No more than one book selected per person (what if there are fewer than 4 users?)
-	-Are duplicates allowed?
+	-Are duplicates allowed? [would prefer not]
 
 -Users are able to vote to select one of the four books
-	-Is there a time limit?
-	-What if there is a tie?
+	-Is there a time limit? [1 week]
+	-What if there is a tie? [random tiebreaker OK]
 
 -System makes the winner of the vote known
-	-Are winners removed from the lists that they appear on?
+	-Are winners removed from the lists that they appear on? [yes]
 
 
 Non-essential Features:
 
 -System keeps a record of past winning books
-	-Are these excluded from being chosen in the future?
-
+	-Are these excluded from being chosen in the future? [yes. i'd argue this is essential, but other features (e.g., allowing users to rate past books) are non-essential.]
 -Users can rate past winning books
