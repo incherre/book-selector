@@ -101,4 +101,4 @@ ENV/
 .mypy_cache/
 
 # my stuff
-*/book-selector-key.json
+book-selector-key.json
