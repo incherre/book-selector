@@ -25,3 +25,11 @@ Possible Designs:
 	-Longer to develop
 
 3) ???
+
+
+##########THOUGHTS FROM CLARA##########
+For option 1, I think it might be possible to use Forms to get around some of the validation issues. If each user has a Form with a Book text field and an Author text field, that Form could automatically populate a tab in the spreadsheet. There are some possibly trivial/possibly non-trivial issues here, like that Forms creates a new unnamed tab with results, and always has a row with fields and a column with timestamps, but it might be a way to get out of some of the user error potential.
+
+I think option 1 with those tweaks would be a great start - something that Anie and I as admins could use for now to fix the most basic problem (manually updating the spreadsheet to add new suggestions and remove ones we've voted on). However, I think option 2 is a better long-term strategy for a few reasons: (i) friendlier for non-expert users (so if a new admin comes on, we don't have to teach them how to do everything from scratch), (ii) advanced features like automatically creating voting forms and sending them to the group (maybe option 1 could do this, too? idk.), (iii) greater future development potential. That last one is mostly for you. I think this app is something that more than just I will be interested in. There aren't really good book club apps, and definitely not ones that handle voting in a remotely sophisticated way. I think you could actually market something like this if you wanted to, but it would probably need a user-friendly interface (and honestly, an Android/iOS interface would be better for that cause you could just pop it in the app store for $1.99).
+
+What do you think of all that?
