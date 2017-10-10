@@ -50,8 +50,11 @@ try:
     sh = gc.create(sheet_name)
     sh.add_worksheet("History", 100, 4)
     sh.add_worksheet("CurrentVote", 100, 6)
-    sh.del_worksheet(sh.worksheet('sheet1'))
-except:
+    
+    sh2 = gc.open(sheet_name) #the first instance never shows 'sheet1'
+    sh2.del_worksheet(sh2.sheet1)
+except BaseException as e:
+    print(e)
     print("Error: failed to create sheet")
     exit()
 else:
