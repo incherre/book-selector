@@ -2,15 +2,23 @@
 #Much of this is taken from the quickstart at developers.google.com/sheets/api/quickstart/python
 
 import httplib2
+import os
 
 from oauth2client.service_account import ServiceAccountCredentials
+from oauth2client import client
+from oauth2client import tools
+from oauth2client.file import Storage
 from googleapiclient import discovery
 
 #scope = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 scope =  [
 'https://spreadsheets.google.com/feeds',
-'https://www.googleapis.com/auth/drive'
+'https://www.googleapis.com/auth/drive',
+'https://www.googleapis.com/auth/forms',
 ]
+SCOPES = scope
+CLIENT_SECRET_FILE = 'book-selector-userauth-key.json'
+APPLICATION_NAME = 'Test Script for Book Selector'
 
 try:
     credentials = ServiceAccountCredentials.from_json_keyfile_name('book-selector-key.json', scope)
@@ -39,7 +47,6 @@ def newSheet(credentials):
     file_id = response['spreadsheetId']
     return file_id
 
-tester_email = 'test@example.com'
 #Share the sheet
 #from developers.google.com/drive/v3/web/manage-sharing
 def callback(request_id, response, exception):
@@ -67,16 +74,48 @@ def shareWith(http, file_id, email):
     batch.execute()
 
 #Creating a form
-apps_script_api_id = "The api id"
-def createForm(http, script_id):
-    script_service = discovery.build('script', 'v1', http=http)
+def get_credentials():
+    """Gets valid user credentials from storage.
 
-    request = {"function": "makeTestForm"}
+    If nothing has been stored, or if the stored credentials are invalid,
+    the OAuth2 flow is completed to obtain the new credentials.
+
+    Returns:
+        Credentials, the obtained credential.
+    """
+    home_dir = os.path.expanduser('~')
+    credential_dir = os.path.join(home_dir, '.credentials')
+    if not os.path.exists(credential_dir):
+        os.makedirs(credential_dir)
+    credential_path = os.path.join(credential_dir, 'appscript-credentials.json')
+
+    store = Storage(credential_path)
+    credentials = store.get()
+    if not credentials or credentials.invalid:
+        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
+        flow.user_agent = APPLICATION_NAME
+        credentials = tools.run_flow(flow, store)#, flags)
+        print('Storing credentials to ' + credential_path)
+    return credentials
+
+apps_script_api_id = "api id"
+def createForm(script_id):
+    #got to find a way around:
+    #https://issuetracker.google.com/issues/36763096
+    s_credentials = get_credentials()
+    s_http = credentials.authorize(httplib2.Http())
+    script_service = discovery.build('script', 'v1', http=s_http)
+
+    request = {"function": "makeTestForm",
+               "parameters": [credentials._service_account_email],}
 
     response = script_service.scripts().run(body=request, scriptId=script_id).execute()
 
-    folderSet = response['response'].get('result', {})
+    print(str(response))
 
-    print(str(folderSet))
+tester_email = 'test@example.com'
+#file_id = newSheet(credentials)
+#shareWith(http, file_id, tester_email)
+createForm(apps_script_api_id)
 
-createForm(http, apps_script_api_id)
+
