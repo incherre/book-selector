@@ -14,7 +14,6 @@ from googleapiclient import discovery
 scope =  [
 'https://spreadsheets.google.com/feeds',
 'https://www.googleapis.com/auth/drive',
-'https://www.googleapis.com/auth/forms',
 ]
 SCOPES = scope
 CLIENT_SECRET_FILE = 'book-selector-userauth-key.json'
@@ -69,53 +68,12 @@ def shareWith(http, file_id, email):
             fileId=file_id,
             body=user_permission,
             fields='id',
-            transferOwnership=True, #only required for owner permission
+            transferOwnership=True, #only required for 'owner' permission
     ))
     batch.execute()
 
-#Creating a form
-def get_credentials():
-    """Gets valid user credentials from storage.
-
-    If nothing has been stored, or if the stored credentials are invalid,
-    the OAuth2 flow is completed to obtain the new credentials.
-
-    Returns:
-        Credentials, the obtained credential.
-    """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir, 'appscript-credentials.json')
-
-    store = Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        credentials = tools.run_flow(flow, store)#, flags)
-        print('Storing credentials to ' + credential_path)
-    return credentials
-
-apps_script_api_id = "api id"
-def createForm(script_id):
-    #got to find a way around:
-    #https://issuetracker.google.com/issues/36763096
-    s_credentials = get_credentials()
-    s_http = credentials.authorize(httplib2.Http())
-    script_service = discovery.build('script', 'v1', http=s_http)
-
-    request = {"function": "makeTestForm",
-               "parameters": [credentials._service_account_email],}
-
-    response = script_service.scripts().run(body=request, scriptId=script_id).execute()
-
-    print(str(response))
-
 tester_email = 'test@example.com'
-#file_id = newSheet(credentials)
-#shareWith(http, file_id, tester_email)
-createForm(apps_script_api_id)
+file_id = newSheet(credentials)
+shareWith(http, file_id, tester_email)
 
 
