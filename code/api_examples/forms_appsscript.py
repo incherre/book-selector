@@ -60,6 +60,8 @@ def main():
     directory.
     """
     SCRIPT_ID = 'ENTER_YOUR_SCRIPT_ID_HERE'
+    user_name = 'Enter a username here'
+    user_email = 'Enter a user email here'
     
     scope =  [
     'https://spreadsheets.google.com/feeds',
@@ -74,8 +76,10 @@ def main():
     service = discovery.build('script', 'v1', http=http)
 
     # Create an execution request object.
-    request = {"function": "makeTestForm",
-               "parameters": [service_account_email]
+    request = {"function": "makeBooksForm",
+               "parameters": [service_account_email,
+                              user_email,
+                              user_name]
               }
 
     try:
@@ -100,12 +104,16 @@ def main():
                     print("\t{0}: {1}".format(trace['function'],
                         trace['lineNumber']))
         else:
-            # The structure of the result will depend upon what the Apps Script
-            # function returns. Here, the function returns an Apps Script Object
-            # with String keys and values, and so the result is treated as a
-            # Python dictionary (folderSet).
-            print("Success!")
-
+            #The structure for makeBooksForm should be a dict with form_id and form_url
+            formInfo = response['response'].get('result', {})
+            
+            if not formInfo:
+                print('No form info returned!')
+            else:
+                if formInfo['form_id']:
+                    print('Form id: ' + formInfo['form_id'])
+                if formInfo['form_url']:
+                    print('Form url: ' + formInfo['form_url'])
     except errors.HttpError as e:
         # The API encountered a problem before the script started executing.
         print(e.content)
