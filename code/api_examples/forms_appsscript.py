@@ -76,10 +76,9 @@ def main():
     service = discovery.build('script', 'v1', http=http)
 
     # Create an execution request object.
-    request = {"function": "makeBooksForm",
+    request = {"function": "makePollForm",
                "parameters": [service_account_email,
-                              user_email,
-                              user_name]
+                              ["Book1", "Book2", "Book3", "Book4"]]
               }
 
     try:
