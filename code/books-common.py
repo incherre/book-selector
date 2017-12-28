@@ -6,22 +6,58 @@ class Book:
     def __init__(self):
         self.title = None
         self.authorFname = None
+        self.authorLname = None
         self.location = None
+        self.data_io = None
 
-    def __init__(self, title, authorFname, authorLname, location):
-        #TODO
+    def __init__(self, title, authorFname, authorLname, location, data_io):
+        if isinstance(title, str):
+            self.title = title
+        else:
+            raise TypeError("Provided title not a string.")
+
+        if isinstance(authorFname, str):
+            self.authorFname = authorFname
+        else:
+            raise TypeError("Provided author's first name not a string.")
+
+        if isinstance(authorLname, str):
+            self.authorLname = authorLname
+        else:
+            raise TypeError("Provided author's last name not a string.")
+
+        if isinstance(location, Location):
+            self.location = location
+        else:
+            raise TypeError("Provided location not a Location object.")
+
+        if isinstance(data_io, DataIO):
+            self.title = title
+        else:
+            raise TypeError("Provided data io interface not a DataIO object.")
+        
 
     def delete(self):
-        #TODO
+        '''Removes this book from the database. Returns success.'''
+        return self.data_io.removeBook(self)
 
     def getTitle(self):
-        #TODO
+        '''Returns the title of this book.'''
+        return self.title
 
     def getAuthorName(self):
-        #TODO
+        '''Returns the author's name.'''
+        return self.authorFname + " " + self.authorLname
 
     def compare(self, other):
-        #TODO
+        '''Compares to another book. Books with the same title and author are considered equal.'''
+        ret = isinstance(other, Book)
+
+        #These next three lines rely on short circuit evalutation
+        ret = ret and self.title.lower() == other.title.lower()
+        ret = ret and self.authorFname.lower() == other.authorFname.lower()
+        ret = ret and self.authorLname.lower() == other.authorLname.lower()
+        return ret 
 
 class User:
     '''A class representing a book club participant.'''
@@ -31,8 +67,9 @@ class User:
         self.books = None
         self.numBooks = 0
         self.formLink = None
+        self.data_io = None
 
-    def __init__(self, userName, books, formLink):
+    def __init__(self, userName, books, formLink, data_io):
         #TODO
 
     def getBooks(self):
@@ -81,8 +118,9 @@ class Poll:
         self.scores = None
         self.formLink = None
         self.dateCreated = None
+        self.data_io = None
 
-    def __init__(self, options, scores, formLink, dateCreated):
+    def __init__(self, options, scores, formLink, dateCreated, data_io):
         #TODO
 
     def getWinner(self):
@@ -108,3 +146,36 @@ class Location:
 
     def compare(self, other):
         raise NotImplementedError('Abstract method "compare" not implemented')
+
+class DataIO:
+    '''An abstract class representing the functions to communicate with a DB.'''
+
+    def __init__(self):
+        raise NotImplementedError('Abstract method "__init__" not implemented')
+
+    def getUserNames(self):
+        raise NotImplementedError('Abstract method "getUserNames" not implemented')
+
+    def getUserInfo(self, user):
+        raise NotImplementedError('Abstract method "getUserInfo" not implemented')
+
+    def getUserBooks(self, user):
+        raise NotImplementedError('Abstract method "getUserBooks" not implemented')
+
+    def getHistory(self):
+        raise NotImplementedError('Abstract method "getHistory" not implemented')
+
+    def getCurrentPoll(self):
+        raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
+
+    def createUser(self, user):
+        raise NotImplementedError('Abstract method "createUser" not implemented')
+
+    def removeBook(self, book):
+        raise NotImplementedError('Abstract method "removeBook" not implemented')
+
+    def newPoll(self, poll):
+        raise NotImplementedError('Abstract method "newPoll" not implemented')
+
+    def addWinner(self, book):
+        raise NotImplementedError('Abstract method "addWinner" not implemented')
