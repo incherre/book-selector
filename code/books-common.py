@@ -67,22 +67,39 @@ class User:
         self.books = None
         self.numBooks = 0
         self.formLink = None
-        self.data_io = None
 
-    def __init__(self, userName, books, formLink, data_io):
-        #TODO
+    def __init__(self, userName, books, formLink):
+        if isinstance(userName, str):
+            self.userName = userName
+        else:
+            raise TypeError("Provided user name not a string.")
+
+        if isinstance(books, list) and (len(books) == 0 or isinstance(books[0], list)):
+            self.books = books
+            self.numBooks = len(books)
+        else:
+            raise TypeError("Provided book list not a list of books.")
+
+        if isinstance(formLink, str):
+            self.formLink = formLink
+        else:
+            raise TypeError("Provided link to form not a string.")
 
     def getBooks(self):
-        #TODO
+        '''Returns the list of books suggested by this user.'''
+        return self.books
 
     def getUserName(self):
-        #TODO
+        '''Returns the user's username.'''
+        return self.userName
 
     def getNumBooks(self):
-        #TODO
+        '''Returns the number of books a user has.'''
+        return self.numBooks
 
     def getFormLink(self):
-        #TODO
+        '''Returns the link to the form the user uses to input books.'''
+        return self.formLink
 
 class Date:
     '''A class representing when a poll happened.'''
@@ -93,22 +110,40 @@ class Date:
         self.day = None
 
     def __init__(self, year, month, day):
-        #TODO
+        if isinstance(year, int):
+            self.year = year
+        else:
+            raise TypeError("Provided year not a number.")
+
+        if isinstance(month, int) and month > 0 and month <= 12:
+            self.month = month
+        else:
+            raise TypeError("Provided month not a valid number.")
+
+        if isinstance(day, int) and day > 0 and day <= 31:
+            self.day = day
+        else:
+            raise TypeError("Provided day not a valid number.")
 
     def getStringDate(self):
-        #TODO
+        '''Returns a string representation of the date.'''
+        return str(self.year) + "/" + str(self.month) + "/" + str(self.day)
 
     def getYear(self):
-        #TODO
+        '''Returns the year.'''
+        return self.year
 
     def getMonth(self):
-        #TODO
+        '''Returns the month.'''
+        return self.month
 
     def getDay(self):
-        #TODO
+        '''Returns the day.'''
+        return self.day
 
     def compare(self, other):
-        #TODO
+        '''Tests for equality between dates.'''
+        return isinstance(other, Date) and self.year == other.year and self.month == other.month and self.day == other.day
 
 class Poll:
     '''A class representing a preferred book poll.'''
