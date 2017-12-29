@@ -1,5 +1,7 @@
 '''This file contains the shared classes used by the book-selector project.'''
 
+import random
+
 class Book:
     '''A class representing a book recommended by a user.'''
 
@@ -74,7 +76,7 @@ class User:
         else:
             raise TypeError("Provided user name not a string.")
 
-        if isinstance(books, list) and (len(books) == 0 or isinstance(books[0], list)):
+        if isinstance(books, list) and (len(books) == 0 or isinstance(books[0], Book)):
             self.books = books
             self.numBooks = len(books)
         else:
@@ -156,22 +158,62 @@ class Poll:
         self.data_io = None
 
     def __init__(self, options, scores, formLink, dateCreated, data_io):
-        #TODO
+        if isinstance(options, list) and (len(options) == 0 or isinstance(options[0], Book)):
+            self.options = options
+        else:
+            raise TypeError("Provided options list not a list of books.")
+
+        if isinstance(scores, list) and len(scores) == len(options) and (len(scores) == 0 or isinstance(options[0], int)):
+            self.scores = scores
+        else:
+            raise TypeError("Provided scores list not a valid list of numbers.")
+
+        if isinstance(formLink, str):
+            self.formLink = formLink
+        else:
+            raise TypeError("Provided link to form not a string.")
+
+        if isinstance(dateCreated, Date):
+            self.dateCreated = dateCreated
+        else:
+            raise TypeError("Provided date not a date object.")
+
+        if isinstance(data_io, DataIO):
+            self.title = title
+        else:
+            raise TypeError("Provided data io interface not a DataIO object.")
 
     def getWinner(self):
-        #TODO
+        '''Returns the winner of the poll.'''
+        if not hasattr(self, 'winner'):
+            winning_threshold = max(self.scores)
+            potential_winners = [i for i in range(len(self.scores)) if self.scores[i] == winning_threshold]
+            self.winner = options[random.choice(potential_winners)] #deal with ties and make sure the result is consistent
+        return self.winner            
 
     def closeVoting(self):
-        #TODO
+        '''Closes the poll for voting. Returns success.'''
+        return self.data_io.closePoll(self)
 
     def getFormLink(self):
-        #TODO
+        '''Returns the link used to vote.'''
+        return self.formLink
 
     def getOptions(self):
-        #TODO
+        '''Returns the list of options used in the poll.'''
+        return self.options
 
     def getDate(self):
-        #TODO
+        '''Returns the date the poll was created.'''
+        return self.date
+
+    def updateResults(self):
+        '''Changes the results to those of the current poll. Removes the cached winner if it exists.'''
+        current_poll = self.data_io.getCurrentPoll()
+        self.scores = current_poll.scores
+
+        if hasattr(self, 'winner'):
+            del self.winner
 
 class Location:
     '''An abstract class representing where a book is stored'''
@@ -211,6 +253,9 @@ class DataIO:
 
     def newPoll(self, poll):
         raise NotImplementedError('Abstract method "newPoll" not implemented')
+
+    def closePoll(self, poll):
+        raise NotImplementedError('Abstract method "closePoll" not implemented')
 
     def addWinner(self, book):
         raise NotImplementedError('Abstract method "addWinner" not implemented')
