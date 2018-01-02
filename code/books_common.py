@@ -163,7 +163,7 @@ class Poll:
         else:
             raise TypeError("Provided options list not a list of books.")
 
-        if isinstance(scores, list) and len(scores) == len(options) and (len(scores) == 0 or isinstance(options[0], int)):
+        if isinstance(scores, list) and len(scores) == len(options) and (len(scores) == 0 or isinstance(scores[0], int)):
             self.scores = scores
         else:
             raise TypeError("Provided scores list not a valid list of numbers.")
@@ -179,7 +179,7 @@ class Poll:
             raise TypeError("Provided date not a date object.")
 
         if isinstance(data_io, DataIO):
-            self.title = title
+            self.data_io = data_io
         else:
             raise TypeError("Provided data io interface not a DataIO object.")
 

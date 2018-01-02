@@ -88,46 +88,69 @@ class TestPollMethods(unittest.TestCase):
     def test_updateResults(self):
         pass #TODO
 
+class BaseLocationWithoutErrorInit(books_common.Location):
+    def __init__(self):
+        pass
+
+class BaseDataIOWithoutErrorInit(books_common.DataIO):
+    def __init__(self):
+        pass
+
 class TestLocationMethods(unittest.TestCase):
     def test_basic_init(self):
-        pass #TODO
+        with self.assertRaises(NotImplementedError):
+            testVar = books_common.Location()
 
     def test_compare(self):
-        pass #TODO
+        testLoc1 = BaseLocationWithoutErrorInit()
+        testLoc2 = BaseLocationWithoutErrorInit()
+        with self.assertRaises(NotImplementedError):
+            testLoc1.compare(testLoc2)     
 
 class TestDataIOMethods(unittest.TestCase):
     def test_basic_init(self):
-        pass #TODO
+        with self.assertRaises(NotImplementedError):
+            testVar = books_common.DataIO()
+
+    def setUp(self):
+        self.testIO = BaseDataIOWithoutErrorInit()
+        self.testBook = books_common.Book("Title", "Sarah", "Smith", BaseLocationWithoutErrorInit(), BaseDataIOWithoutErrorInit())
+        self.testPoll = books_common.Poll([self.testBook, self.testBook], [0, 0], "www.example.com", books_common.Date(2000, 1, 1), BaseDataIOWithoutErrorInit())
+
+    def tearDown(self):
+        del self.testIO
+        del self.testBook
+        del self.testPoll
 
     def test_getUserNames(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.getUserNames)
 
     def test_getUserInfo(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.getUserInfo, "uName")
 
     def test_getUserBooks(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.getUserBooks, "uName")
 
     def test_getHistory(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.getHistory)
 
     def test_getCurrentPoll(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.getCurrentPoll)
 
     def test_createUser(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.createUser, "uName")
 
     def test_removeBook(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.removeBook, self.testBook)
 
     def test_newPoll(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.newPoll, self.testPoll)
 
     def test_closePoll(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.closePoll, self.testPoll)
 
     def test_addWinner(self):
-        pass #TODO
+        self.assertRaises(NotImplementedError, self.testIO.addWinner, self.testBook)
 
 if __name__ == '__main__':
     unittest.main()
