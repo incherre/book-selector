@@ -34,7 +34,7 @@ class Book:
             raise TypeError("Provided location not a Location object.")
 
         if isinstance(data_io, DataIO):
-            self.title = title
+            self.data_io = data_io
         else:
             raise TypeError("Provided data io interface not a DataIO object.")
         
