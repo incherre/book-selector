@@ -140,45 +140,126 @@ class TestBookMethods(unittest.TestCase):
         self.assertFalse(self.basicBook.compare(other))
 
 class TestUserMethods(unittest.TestCase):
-    def test_basic_init(self):
-        pass #TODO
+    def setUp(self):
+        abook = books_common.Book("title", "fName", "lName", BaseLocationWithoutErrorInit(), BaseDataIOWithoutErrorInit())
+        
+        self.t_userName = "uName"
+        self.t_books = [abook]
+        self.t_formLink = "www.example.com"
 
-    def test_full_init_(self):
-        pass #TODO
+        self.t_user = books_common.User(self.t_userName, self.t_books, self.t_formLink)
+
+    def tearDown(self):
+        del self.t_userName
+        del self.t_books
+        del self.t_formLink
+
+        del self.t_user
+    
+    def test_init(self):
+        testVar = books_common.User(self.t_userName, self.t_books, self.t_formLink)
+        self.assertIsInstance(testVar, books_common.User)
+
+    def test_init_fail_invalid_userName(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(None, self.t_books, self.t_formLink)
+
+    def test_init_fail_invalid_books(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(self.t_userName, None, self.t_formLink)
+
+    def test_init_fail_invalid_formLink(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(self.t_userName, self.t_books, None)
 
     def test_getBooks(self):
-        pass #TODO
+        maybe_books = self.t_user.getBooks()
+        self.assertIsInstance(maybe_books, list)
+        self.assertEqual(len(maybe_books), 1)
+        self.assertTrue(maybe_books[0].compare(self.t_books[0]))
 
     def test_getUserName(self):
-        pass #TODO
+        self.assertEqual(self.t_user.getUserName(), self.t_userName)
 
     def test_getNumBooks(self):
-        pass #TODO
+        self.assertEqual(self.t_user.getNumBooks(), len(self.t_books))
 
     def test_getFormLink(self):
-        pass #TODO
+        self.assertEqual(self.t_user.getFormLink(), self.t_formLink)
 
 class TestDateMethods(unittest.TestCase):
-    def test_basic_init(self):
-        pass #TODO
+    def setUp(self):
+        self.t_year = 2000
+        self.t_month = 1
+        self.t_day = 1
+        self.t_strDate = "2000/1/1"
 
-    def test_full_init(self):
-        pass #TODO
+        self.t_date = books_common.Date(self.t_year, self.t_month, self.t_day)
+
+    def tearDown(self):
+        del self.t_year
+        del self.t_month
+        del self.t_day
+        del self.t_strDate
+
+        del self.t_date
+        
+    def test_init(self):
+        testVar = books_common.Date(self.t_year, self.t_month, self.t_day)
+        self.assertIsInstance(testVar, books_common.Date)
+
+    def test_init_fail_no_year(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(None, self.t_month, self.t_day)
+
+    def test_init_fail_no_month(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, None, self.t_day)
+
+    def test_init_fail_small_month(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, 0, self.t_day)
+
+    def test_init_fail_big_month(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, 13, self.t_day)
+
+    def test_init_fail_no_day(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, self.t_month, None)
+
+    def test_init_fail_small_day(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, self.t_month, 0)
+
+    def test_init_fail_big_day(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Date(self.t_year, self.t_month, 32)
 
     def test_getStringDate(self):
-        pass #TODO
+        self.assertEqual(self.t_date.getStringDate(), self.t_strDate)
 
     def test_getYear(self):
-        pass #TODO
+        self.assertEqual(self.t_date.getYear(), self.t_year)
 
     def test_getMonth(self):
-        pass #TODO
+        self.assertEqual(self.t_date.getMonth(), self.t_month)
 
     def test_getDay(self):
-        pass #TODO
+        self.assertEqual(self.t_date.getDay(), self.t_day)
 
     def test_compare(self):
-        pass #TODO
+        other = books_common.Date(self.t_year, self.t_month, self.t_day)
+        self.assertTrue(self.t_date.compare(other))
+
+        other = books_common.Date(2001, self.t_month, self.t_day)
+        self.assertFalse(self.t_date.compare(other))
+
+        other = books_common.Date(self.t_year, 2, self.t_day)
+        self.assertFalse(self.t_date.compare(other))
+
+        other = books_common.Date(self.t_year, self.t_month, 2)
+        self.assertFalse(self.t_date.compare(other))
 
 class TestPollMethods(unittest.TestCase):
     def test_basic_init(self):
