@@ -188,7 +188,7 @@ class Poll:
         if not hasattr(self, 'winner'):
             winning_threshold = max(self.scores)
             potential_winners = [i for i in range(len(self.scores)) if self.scores[i] == winning_threshold]
-            self.winner = options[random.choice(potential_winners)] #deal with ties and make sure the result is consistent
+            self.winner = self.options[random.choice(potential_winners)] #deal with ties and make sure the result is consistent
         return self.winner            
 
     def closeVoting(self):
@@ -205,7 +205,7 @@ class Poll:
 
     def getDate(self):
         '''Returns the date the poll was created.'''
-        return self.date
+        return self.dateCreated
 
     def updateResults(self):
         '''Changes the results to those of the current poll. Removes the cached winner if it exists.'''

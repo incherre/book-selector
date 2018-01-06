@@ -66,6 +66,13 @@ class DataIOAllFail(books_common.DataIO):
     def addWinner(self, book):
         return False
 
+class BaseDataIOReturnPoll(books_common.DataIO):
+    def __init__(self, poll):
+        self.poll = poll
+
+    def getCurrentPoll(self):
+        return self.poll
+
 ## End test implementations
 
 class TestBookMethods(unittest.TestCase):
@@ -262,30 +269,108 @@ class TestDateMethods(unittest.TestCase):
         self.assertFalse(self.t_date.compare(other))
 
 class TestPollMethods(unittest.TestCase):
-    def test_basic_init(self):
-        pass #TODO
+    def setUp(self):
+        data_io = BaseDataIOWithoutErrorInit()
+        location = BaseLocationWithoutErrorInit()
 
-    def test_full_init(self):
-        pass #TODO
+        self.t_book1 = books_common.Book("opt1", "fn", "ln", location, data_io)
+        self.t_book2 = books_common.Book("opt2", "fn", "ln", location, data_io)
+        self.t_book3 = books_common.Book("opt3", "fn", "ln", location, data_io)
+        
+        self.t_options = [self.t_book1, self.t_book2, self.t_book3]
+        self.t_scores = [0, 0, 0]
+        self.t_formLink = "www.example.com"
+        self.t_dateCreated = books_common.Date(2000, 1, 1)
+        self.t_data_io = data_io
+
+        self.t_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def tearDown(self):
+        del self.t_options
+        del self.t_scores
+        del self.t_formLink
+        del self.t_dateCreated
+        del self.t_data_io
+
+        del self.t_poll
+
+    def test_init(self):
+        testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+        self.assertIsInstance(testVar, books_common.Poll)
+
+    def test_init_fail_no_options(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(None, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_invalid_options(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll([None, None], self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_no_scores(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, None, self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_invalid_scores(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, [None, None], self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_wrong_num_scores(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, [0], self.t_formLink, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_no_link(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, self.t_scores, None, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_no_date(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, None, self.t_data_io)
+
+    def test_init_fail_no_data_io(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, None)
 
     def test_getWinner(self):
-        pass #TODO
+        self.t_poll.scores = [0, 0, 1]
+        self.assertTrue(self.t_book3.compare(self.t_poll.getWinner()))
+        del self.t_poll.winner
+
+        self.t_poll.scores = [0, 1, 1]
+        winner = self.t_poll.getWinner()
+        self.assertTrue(self.t_book3.compare(winner) or self.t_book2.compare(winner))
+        for i in range(10):
+            self.assertTrue(winner.compare(self.t_poll.getWinner()))
+        del self.t_poll.winner
 
     def test_closeVoting(self):
-        pass #TODO
+        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, DataIOAllSuccess())
+        self.assertTrue(testPoll.closeVoting())
+
+        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, DataIOAllFail())
+        self.assertFalse(testPoll.closeVoting())
 
     def test_getFormLink(self):
-        pass #TODO
+        self.assertEqual(self.t_poll.getFormLink(), self.t_formLink)
 
     def test_getOptions(self):
-        pass #TODO
+        options = self.t_poll.getOptions()
+        for i in range(len(options)):
+            self.assertTrue(options[i].compare(self.t_options[i]))
 
     def test_getDate(self):
-        pass #TODO
+        self.assertTrue(self.t_dateCreated.compare(self.t_poll.getDate()))
 
     def test_updateResults(self):
-        pass #TODO
+        newScores = [100, 101, 102]
+        bigPoll = books_common.Poll(self.t_options, newScores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+        testPoll = books_common.Poll(self.t_options, [1, 0, 0], self.t_formLink, self.t_dateCreated, BaseDataIOReturnPoll(bigPoll))
 
+        testPoll.winner = self.t_book1
+        testPoll.updateResults()
+        self.assertFalse(hasattr(testPoll, 'winner'))
+        for i in range(len(testPoll.scores)):
+            self.assertEqual(newScores[i], testPoll.scores[i])
+        
 class TestLocationMethods(unittest.TestCase):
     def test_basic_init(self):
         with self.assertRaises(NotImplementedError):
