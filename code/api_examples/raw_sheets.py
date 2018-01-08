@@ -10,14 +10,12 @@ from oauth2client import tools
 from oauth2client.file import Storage
 from googleapiclient import discovery
 
-#scope = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 scope =  [
 'https://spreadsheets.google.com/feeds',
 'https://www.googleapis.com/auth/drive',
 ]
 SCOPES = scope
 CLIENT_SECRET_FILE = 'book-selector-userauth-key.json'
-APPLICATION_NAME = 'Test Script for Book Selector'
 
 try:
     credentials = ServiceAccountCredentials.from_json_keyfile_name('book-selector-key.json', scope)
