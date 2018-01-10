@@ -1,5 +1,33 @@
 import books_common
+
+import os
 from oauth2client.service_account import ServiceAccountCredentials
+from oauth2client import client
+from oauth2client.file import Storage
+from oauth2client import tools
+
+def get_credentials(credential_name, client_secret_file, scopes, application_name):
+    '''Gets valid user credentials from storage.
+
+    If nothing has been stored, or if the stored credentials are invalid,
+    the OAuth2 flow is completed to obtain the new credentials.
+
+    Returns:
+        Credentials, the obtained credential.
+    '''
+    home_dir = os.path.expanduser('~')
+    credential_dir = os.path.join(home_dir, '.credentials')
+    if not os.path.exists(credential_dir):
+        os.makedirs(credential_dir)
+    credential_path = os.path.join(credential_dir, credential_name)
+
+    store = Storage(credential_path)
+    credentials = store.get()
+    if not credentials or credentials.invalid:
+        flow = client.flow_from_clientsecrets(client_secret_file, scopes)
+        flow.user_agent = application_name
+        credentials = tools.run_flow(flow, store)
+    return credentials
 
 class SheetsLocation(books_common.Location):
     '''A class representing where a book is stored when used with GoogleDocsBot.'''
@@ -19,14 +47,23 @@ class GoogleDocsBot(books_common.DataIO):
     appsscript_scope = ['https://www.googleapis.com/auth/drive',
                              'https://www.googleapis.com/auth/forms']
     
-    def __init__(self, credential_path):
+    def __init__(self, credential_path, client_secret_path, app_name, credential_name):
+        if isinstance(app_name, str):
+            self.app_name = app_name
+        else:
+            raise TypeError("Provided application name not a string.")
+        
         try:
             self.service_creds = ServiceAccountCredentials.from_json_keyfile_name(credential_path, self.service_scope)
         except FileNotFoundError:
             print('File: "' + str(credential_path) + '" was not found.')
             raise
 
-        #TODO get other exceptions
+        try:
+            get_credentials(credential_name, client_secret_path, self.appsscript_scope, app_name)
+        except FileNotFoundError:
+            print('File: "' + str(client_secret_path) + '" was not found.')
+            raise
         
 
     def getUserNames(self):
