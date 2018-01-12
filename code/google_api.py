@@ -2,7 +2,10 @@ import books_common
 
 import os
 import httplib2
+
 from apiclient import discovery
+from apiclient import errors
+
 from oauth2client.service_account import ServiceAccountCredentials
 from oauth2client import client
 from oauth2client.file import Storage
@@ -67,23 +70,39 @@ class GoogleDocsBot(books_common.DataIO):
             raise TypeError("Provided script_id not a string.")
 
         try:
-            self.service_creds = ServiceAccountCredentials.from_json_keyfile_name(credential_path, self.service_scope)
+            service_creds = ServiceAccountCredentials.from_json_keyfile_name(credential_path, self.service_scope)
+            drive_http = service_creds.authorize(httplib2.Http())
+            self.drive_service = discovery.build('drive', 'v3', http=drive_http)
+            self.sheets_service = discovery.build('sheets', 'v4', credentials=service_creds)
+            self.service_email = service_creds._service_account_email
         except FileNotFoundError:
             print('File: "' + str(credential_path) + '" was not found.')
             raise
 
         try:
-            self.appsscript_creds = get_credentials(credential_name, client_secret_path, self.appsscript_scope, app_name)
+            appsscript_creds = get_credentials(credential_name, client_secret_path, self.appsscript_scope, app_name)
+            appsscript_http = appsscript_creds.authorize(httplib2.Http())
+            self.appsscript_service = discovery.build('script', 'v1', http=appsscript_http)
+
+            email_request = {"function": "getEmail", "parameters": []}
+            email_response = self.appsscript_service.scripts().run(
+                body=email_request,scriptId=self.script_id).execute()
+            
+            if 'error' in email_response:
+                error = email_response['error']['details'][0]
+                raise AppsScriptError(error)
+            else:
+                self.admin_email = email_response['response'].get('result', str)
+
+            if self.admin_email == '':
+                raise AppsScriptError('Failed to retrieve user email.')
         except FileNotFoundError:
             print('File: "' + str(client_secret_path) + '" was not found.')
             raise
 
-    def makeNewBookClub(self):
-        '''Creates the document structure for a new book club. Returns success.'''
-        drive_http = self.service_creds.authorize(httplib2.Http())
-        drive_service = discovery.build('drive', 'v3', http=drive_http)
-
-        files_results = drive_service.files().list(
+    def getFileList(self):
+        '''Returns a list of files accessible by the service account.'''
+        files_results = self.drive_service.files().list(
             fields="nextPageToken, files(id, name)").execute()
         files = files_results.get('files', [])
         nextPageToken = files_results.get('nextPageToken')
@@ -96,28 +115,16 @@ class GoogleDocsBot(books_common.DataIO):
             files += files_results.get('files', [])
             nextPageToken = files_results.get('nextPageToken')
 
+        return files
+
+    def makeNewBookClub(self):
+        '''Creates the document structure for a new book club. Returns success.'''
+        files = self.getFileList()
         if files:
             for item in files:
                 if item['name'] == self.userSheetName:
                     return False #Can't make a new book club when there is already one
 
-        appsscript_http = self.appsscript_creds.authorize(httplib2.Http())
-        appsscript_service = discovery.build('script', 'v1', http=appsscript_http)
-
-        email_request = {"function": "getEmail", "parameters": []}
-        email_response = appsscript_service.scripts().run(
-            body=email_request,scriptId=self.script_id).execute()
-        
-        if 'error' in email_response:
-            error = email_response['error']['details'][0]
-            raise AppsScriptError(error)
-        else:
-            user_email = email_response['response'].get('result', str)
-
-        if user_email == '':
-            raise AppsScriptError('Failed to retrieve user email.')
-
-        sheets_service = discovery.build('sheets', 'v4', credentials=self.service_creds)
         spreadsheet_body = {
             "properties": {
                 "title": self.userSheetName
@@ -129,25 +136,31 @@ class GoogleDocsBot(books_common.DataIO):
                 }
             }]
         }
-        new_sheet_request = sheets_service.spreadsheets().create(body=spreadsheet_body)
-        new_sheet_response = new_sheet_request.execute()
+        new_sheet_request = self.sheets_service.spreadsheets().create(body=spreadsheet_body)
+        try:
+            new_sheet_response = new_sheet_request.execute() #make the new spreadsheet
+        except errors.HttpError:
+            #TODO handle
+            raise
         new_sheet_file_id = new_sheet_response['spreadsheetId']
 
-        print(str(new_sheet_file_id))
+        #TODO add delay to prevent "InternalServerError"s
 
         user_permission = {
             'type': 'user',
             'role': 'owner',
-            'emailAddress': user_email
+            'emailAddress': self.admin_email
         }
-        share_request = drive_service.permissions().create(
+        share_request = self.drive_service.permissions().create(
                 fileId=new_sheet_file_id,
                 body=user_permission,
                 fields='id',
                 transferOwnership=True) #only required for 'owner' permission
-        share_results = share_request.execute()
-
-        print(str(share_results))
+        try:
+            share_response = share_request.execute() #share the new spreadsheet
+        except errors.HttpError:
+            #TODO handle
+            raise
 
         return True
 
