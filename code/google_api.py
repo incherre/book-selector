@@ -2,6 +2,7 @@ import books_common
 
 import os
 import httplib2
+import time
 
 from apiclient import discovery
 from apiclient import errors
@@ -117,14 +118,20 @@ class GoogleDocsBot(books_common.DataIO):
 
         return files
 
-    def makeNewBookClub(self):
+    def makeNewBookClub(self, shouldPrint=True, retryShare=5):
         '''Creates the document structure for a new book club. Returns success.'''
+
+        #start checking for old book club code
         files = self.getFileList()
         if files:
             for item in files:
                 if item['name'] == self.userSheetName:
+                    if shouldPrint:
+                        print('Book Club already exists under this bot.')
                     return False #Can't make a new book club when there is already one
+        #end checking for old book club code
 
+        #start creating new book club code
         spreadsheet_body = {
             "properties": {
                 "title": self.userSheetName
@@ -140,12 +147,13 @@ class GoogleDocsBot(books_common.DataIO):
         try:
             new_sheet_response = new_sheet_request.execute() #make the new spreadsheet
         except errors.HttpError:
-            #TODO handle
-            raise
+            if shouldPrint:
+                print('Failed to create the new User spreadsheet')
+            return False
         new_sheet_file_id = new_sheet_response['spreadsheetId']
+        #end creating new book club code
 
-        #TODO add delay to prevent "InternalServerError"s
-
+        #start sharing code
         user_permission = {
             'type': 'user',
             'role': 'owner',
@@ -156,11 +164,24 @@ class GoogleDocsBot(books_common.DataIO):
                 body=user_permission,
                 fields='id',
                 transferOwnership=True) #only required for 'owner' permission
-        try:
-            share_response = share_request.execute() #share the new spreadsheet
-        except errors.HttpError:
-            #TODO handle
-            raise
+        
+        for i in range(retryShare): #Try some number (default 5) of times
+            try:
+                share_response = share_request.execute() #share the new spreadsheet
+            except errors.HttpError:
+                if i < (retryShare - 1):
+                    if shouldPrint:
+                        print('Failed to share, pausing for a short bit')
+                    time.sleep(1) #delay prevents "InternalServerError"s
+                    if shouldPrint:
+                        print('Done pausing, trying again')
+                else:
+                    if shouldPrint:
+                        print('Tried and failed the maximum number of times.')
+                    raise #could try to delete the document first...
+            else:
+                break
+        #end sharing code
 
         return True
 
