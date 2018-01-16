@@ -38,6 +38,9 @@ def get_credentials(credential_name, client_secret_file, scopes, application_nam
 class AppsScriptError(Exception):
     pass
 
+class SpreadsheetFormatError(Exception):
+    pass
+
 class SheetsLocation(books_common.Location):
     '''A class representing where a book is stored when used with GoogleDocsBot.'''
 
@@ -57,7 +60,7 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/forms',
                         'https://www.googleapis.com/auth/userinfo.email']
 
-    userSheetName = ('BookClubUsers', 'Users')
+    userSheetName = ('BookClubInfo', 'Users', 'History')
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -140,8 +143,13 @@ class GoogleDocsBot(books_common.DataIO):
                 "properties": {
                     "title": self.userSheetName[1],
                     "index": 0
-                }
-            }]
+                }},
+                {
+                "properties": {
+                    "title": self.userSheetName[2],
+                    "index": 1
+                }}
+            ]
         }
         new_sheet_request = self.sheets_service.spreadsheets().create(body=spreadsheet_body)
         try:
@@ -185,27 +193,42 @@ class GoogleDocsBot(books_common.DataIO):
 
         return True
 
-    def getUserNames(self):
-        files = self.getFileList()
-        userSheetId = None
-        if files:
-            for item in files:
-                if item['name'] == self.userSheetName[0]:
-                    userSheetId = item['id']
+    def getBookClubInfoSheetID(self):
+        '''Returns the file id of the sheet used to store book club information.'''
 
-        if not userSheetId:
-            #TODO handle case where no user table exists
-            print('no user table')
-            pass
+        if not hasattr(self, 'bookClubInfoSheetID'):
+            files = self.getFileList()
+            self.bookClubInfoSheetID = None
+            if files:
+                for item in files:
+                    if item['name'] == self.userSheetName[0]:
+                        self.bookClubInfoSheetID = item['id']
+
+            if not self.bookClubInfoSheetID:
+                del self.bookClubInfoSheetID
+                raise SpreadsheetFormatError('No User spreadsheet found.')
+
+        return self.bookClubInfoSheetID
+    
+    def getUserNames(self, retryGet=5, fetchNum=10):
+        '''Returns a list of usernames. Optional parameter fetchNum controls how many are fetched at once.'''
+
+        userSheetId = self.getBookClubInfoSheetID()
 
         rangeBase = 'A'
         rangeStart = 1
-        increment = 10
         userNames = []
 
-        rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + increment - 1)
+        rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
         request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-        result = request.execute()
+        for i in range(retryGet):
+            try:
+                result = request.execute()
+            except errors.HttpError:
+                if i == retryGet - 1:
+                    raise
+            else:
+                break
         values = result.get('values', [])
 
         while values != []:
@@ -213,21 +236,24 @@ class GoogleDocsBot(books_common.DataIO):
                 if value != []:
                     userNames.append(value[0])
 
-            rangeStart += increment
-            rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + increment - 1)
+            rangeStart += fetchNum
+            rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
             
             request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-            result = request.execute()
-            #TODO handle failed execution
+            for i in range(retryGet):
+                try:
+                    result = request.execute()
+                except errors.HttpError:
+                    if i == retryGet - 1:
+                        raise
+                else:
+                    break
+            
             values = result.get('values', [])
             
-
         return userNames
 
-        
-        raise NotImplementedError('Abstract method "getUserNames" not implemented')
-
-    def getUserInfo(self, user):
+    def getUserInfo(self, userName):
         raise NotImplementedError('Abstract method "getUserInfo" not implemented')
 
     def getUserBooks(self, user):
