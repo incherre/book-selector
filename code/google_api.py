@@ -57,7 +57,7 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/forms',
                         'https://www.googleapis.com/auth/userinfo.email']
 
-    userSheetName = 'BookClubUsers'
+    userSheetName = ('BookClubUsers', 'Users')
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -88,7 +88,7 @@ class GoogleDocsBot(books_common.DataIO):
             email_request = {"function": "getEmail", "parameters": []}
             email_response = self.appsscript_service.scripts().run(
                 body=email_request,scriptId=self.script_id).execute()
-            
+
             if 'error' in email_response:
                 error = email_response['error']['details'][0]
                 raise AppsScriptError(error)
@@ -107,7 +107,7 @@ class GoogleDocsBot(books_common.DataIO):
             fields="nextPageToken, files(id, name)").execute()
         files = files_results.get('files', [])
         nextPageToken = files_results.get('nextPageToken')
-        
+
         while nextPageToken and nextPageToken != '':
             #make sure to get the full list if required
             files_results = drive_service.files().list(
@@ -125,7 +125,7 @@ class GoogleDocsBot(books_common.DataIO):
         files = self.getFileList()
         if files:
             for item in files:
-                if item['name'] == self.userSheetName:
+                if item['name'] == self.userSheetName[0]:
                     if shouldPrint:
                         print('Book Club already exists under this bot.')
                     return False #Can't make a new book club when there is already one
@@ -134,11 +134,11 @@ class GoogleDocsBot(books_common.DataIO):
         #start creating new book club code
         spreadsheet_body = {
             "properties": {
-                "title": self.userSheetName
+                "title": self.userSheetName[0]
             },
             "sheets": [{
                 "properties": {
-                    "title": "Users",
+                    "title": self.userSheetName[1],
                     "index": 0
                 }
             }]
@@ -164,7 +164,7 @@ class GoogleDocsBot(books_common.DataIO):
                 body=user_permission,
                 fields='id',
                 transferOwnership=True) #only required for 'owner' permission
-        
+
         for i in range(retryShare): #Try some number (default 5) of times
             try:
                 share_response = share_request.execute() #share the new spreadsheet
@@ -186,6 +186,45 @@ class GoogleDocsBot(books_common.DataIO):
         return True
 
     def getUserNames(self):
+        files = self.getFileList()
+        userSheetId = None
+        if files:
+            for item in files:
+                if item['name'] == self.userSheetName[0]:
+                    userSheetId = item['id']
+
+        if not userSheetId:
+            #TODO handle case where no user table exists
+            print('no user table')
+            pass
+
+        rangeBase = 'A'
+        rangeStart = 1
+        increment = 10
+        userNames = []
+
+        rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + increment - 1)
+        request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+        result = request.execute()
+        values = result.get('values', [])
+
+        while values != []:
+            for value in values:
+                if value != []:
+                    userNames.append(value[0])
+
+            rangeStart += increment
+            rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + increment - 1)
+            
+            request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+            result = request.execute()
+            #TODO handle failed execution
+            values = result.get('values', [])
+            
+
+        return userNames
+
+        
         raise NotImplementedError('Abstract method "getUserNames" not implemented')
 
     def getUserInfo(self, user):

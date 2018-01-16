@@ -3,5 +3,5 @@ This is a list of the organization of spreadsheets used by the book selector.
 #TODO: make pretty graphic
 
 There is a sheet called 'BookClubUsers' that will store one user per row.
-	Each row has a username, tbd. (in that order)
+	Each row has a username, email, book input form link, tbd. (in that order)
 
