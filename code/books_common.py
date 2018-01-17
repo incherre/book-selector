@@ -5,13 +5,6 @@ import random
 class Book:
     '''A class representing a book recommended by a user.'''
 
-    def __init__(self):
-        self.title = None
-        self.authorFname = None
-        self.authorLname = None
-        self.location = None
-        self.data_io = None
-
     def __init__(self, title, authorFname, authorLname, location, data_io):
         if isinstance(title, str):
             self.title = title
@@ -64,17 +57,16 @@ class Book:
 class User:
     '''A class representing a book club participant.'''
 
-    def __init__(self):
-        self.userName = None
-        self.books = None
-        self.numBooks = 0
-        self.formLink = None
-
-    def __init__(self, userName, books, formLink):
+    def __init__(self, userName, userEmail, books, formLink):
         if isinstance(userName, str):
             self.userName = userName
         else:
             raise TypeError("Provided user name not a string.")
+        
+        if isinstance(userEmail, str):
+            self.userEmail = userEmail
+        else:
+            raise TypeError("Provided user email not a string.")
 
         if isinstance(books, list) and (len(books) == 0 or isinstance(books[0], Book)):
             self.books = books
@@ -95,6 +87,10 @@ class User:
         '''Returns the user's username.'''
         return self.userName
 
+    def getUserEmail(self):
+        '''Returns the user's email address.'''
+        return self.userEmail
+
     def getNumBooks(self):
         '''Returns the number of books a user has.'''
         return self.numBooks
@@ -105,11 +101,6 @@ class User:
 
 class Date:
     '''A class representing when a poll happened.'''
-
-    def __init__(self):
-        self.year = None
-        self.month = None
-        self.day = None
 
     def __init__(self, year, month, day):
         if isinstance(year, int):
@@ -149,13 +140,6 @@ class Date:
 
 class Poll:
     '''A class representing a preferred book poll.'''
-
-    def __init__(self):
-        self.options = None
-        self.scores = None
-        self.formLink = None
-        self.dateCreated = None
-        self.data_io = None
 
     def __init__(self, options, scores, formLink, dateCreated, data_io):
         if isinstance(options, list) and (len(options) == 0 or isinstance(options[0], Book)):

@@ -35,6 +35,18 @@ def get_credentials(credential_name, client_secret_file, scopes, application_nam
         credentials = tools.run_flow(flow, store)
     return credentials
 
+def try_request_n_times(request, times):
+    for i in range(times):
+        try:
+            result = request.execute()
+        except errors.HttpError:
+            if i == times - 1:
+                raise
+            else:
+                time.sleep(1)
+        else:
+            return result
+
 class AppsScriptError(Exception):
     pass
 
@@ -61,6 +73,7 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/userinfo.email']
 
     userSheetName = ('BookClubInfo', 'Users', 'History')
+    userSheetWidth = 'D'
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -173,22 +186,7 @@ class GoogleDocsBot(books_common.DataIO):
                 fields='id',
                 transferOwnership=True) #only required for 'owner' permission
 
-        for i in range(retryShare): #Try some number (default 5) of times
-            try:
-                share_response = share_request.execute() #share the new spreadsheet
-            except errors.HttpError:
-                if i < (retryShare - 1):
-                    if shouldPrint:
-                        print('Failed to share, pausing for a short bit')
-                    time.sleep(1) #delay prevents "InternalServerError"s
-                    if shouldPrint:
-                        print('Done pausing, trying again')
-                else:
-                    if shouldPrint:
-                        print('Tried and failed the maximum number of times.')
-                    raise #could try to delete the document first...
-            else:
-                break
+        share_response = try_request_n_times(share_request, retryShare) #share the new spreadsheet
         #end sharing code
 
         return True
@@ -221,14 +219,7 @@ class GoogleDocsBot(books_common.DataIO):
 
         rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
         request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-        for i in range(retryGet):
-            try:
-                result = request.execute()
-            except errors.HttpError:
-                if i == retryGet - 1:
-                    raise
-            else:
-                break
+        result = try_request_n_times(request, retryGet)
         values = result.get('values', [])
 
         while values != []:
@@ -240,21 +231,38 @@ class GoogleDocsBot(books_common.DataIO):
             rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
             
             request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-            for i in range(retryGet):
-                try:
-                    result = request.execute()
-                except errors.HttpError:
-                    if i == retryGet - 1:
-                        raise
-                else:
-                    break
-            
+            result = try_request_n_times(request, retryGet)
             values = result.get('values', [])
             
         return userNames
 
-    def getUserInfo(self, userName):
-        raise NotImplementedError('Abstract method "getUserInfo" not implemented')
+    def getUserInfo(self, userName, retryGet=5, fetchNum=10):
+        '''Returns a user's information. Optional parameter fetchNum controls how many are fetched at once.'''
+
+        userSheetId = self.getBookClubInfoSheetID()
+
+        rangeBase = 'A'
+        rangeStart = 1
+        userInfo = []
+
+        rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + self.userSheetWidth + str(rangeStart + fetchNum - 1)
+        request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+        result = try_request_n_times(request, retryGet)
+        values = result.get('values', [])
+
+        while values != []:
+            for user in values:
+                if user != [] and user[0] == userName:
+                    userInfo = user
+
+            rangeStart += fetchNum
+            rangeStr = self.userSheetName[1] + '!' + rangeBase + str(rangeStart) + ':' + self.userSheetWidth + str(rangeStart + fetchNum - 1)
+            
+            request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+            result = try_request_n_times(request, retryGet)
+            values = result.get('values', [])
+            
+        return books_common.User(userInfo[0], userInfo[1], [], userInfo[2])
 
     def getUserBooks(self, user):
         raise NotImplementedError('Abstract method "getUserBooks" not implemented')

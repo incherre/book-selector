@@ -151,33 +151,39 @@ class TestUserMethods(unittest.TestCase):
         abook = books_common.Book("title", "fName", "lName", BaseLocationWithoutErrorInit(), BaseDataIOWithoutErrorInit())
         
         self.t_userName = "uName"
+        self.t_userEmail = "an.email@example.com"
         self.t_books = [abook]
         self.t_formLink = "www.example.com"
 
-        self.t_user = books_common.User(self.t_userName, self.t_books, self.t_formLink)
+        self.t_user = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink)
 
     def tearDown(self):
         del self.t_userName
+        del self.t_userEmail
         del self.t_books
         del self.t_formLink
 
         del self.t_user
     
     def test_init(self):
-        testVar = books_common.User(self.t_userName, self.t_books, self.t_formLink)
+        testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink)
         self.assertIsInstance(testVar, books_common.User)
 
     def test_init_fail_invalid_userName(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(None, self.t_books, self.t_formLink)
+            testVar = books_common.User(None, self.t_userEmail, self.t_books, self.t_formLink)
+
+    def test_init_fail_invalid_userEmail(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink)        
 
     def test_init_fail_invalid_books(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, None, self.t_formLink)
+            testVar = books_common.User(self.t_userName, self.t_userEmail, None, self.t_formLink)
 
     def test_init_fail_invalid_formLink(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, self.t_books, None)
+            testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, None)
 
     def test_getBooks(self):
         maybe_books = self.t_user.getBooks()
@@ -187,6 +193,9 @@ class TestUserMethods(unittest.TestCase):
 
     def test_getUserName(self):
         self.assertEqual(self.t_user.getUserName(), self.t_userName)
+
+    def test_getUserEmail(self):
+        self.assertEqual(self.t_user.getUserEmail(), self.t_userEmail)
 
     def test_getNumBooks(self):
         self.assertEqual(self.t_user.getNumBooks(), len(self.t_books))
