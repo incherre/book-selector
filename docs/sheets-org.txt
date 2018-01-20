@@ -4,6 +4,6 @@ This is a list of the organization of spreadsheets used by the book selector.
 
 There is a spreadsheet called 'BookClubInfo'.
 	BookClubInfo has two sheets.
-	In the sheet named 'Users' each row has a username, email, book input form link, tbd. (in that order)
+	In the sheet named 'Users' each row has a username, email, book input form link, book input form file id (in that order)
 	In the sheet named 'History' each row contains the details of a book that has won the club's vote in the past.
 

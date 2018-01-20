@@ -73,7 +73,7 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/userinfo.email']
 
     infoSpreadNames = ('BookClubInfo', 'Users', 'History')
-    userSheetWidth = 'C'
+    userSheetWidth = 'D'
     historySheetWidth = 'D'
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
@@ -305,7 +305,9 @@ class GoogleDocsBot(books_common.DataIO):
     def createUser(self, userName, userEmail, shouldPrint=True):
         '''Creates all the data entries for a new user.'''
 
-        if self.getUserInfo(userName) != []:
+        existingUserNames = self.getUserNames()
+        
+        if userName in existingUserNames:
             if shouldPrint:
                 print('User already exists.')
             return False
@@ -321,9 +323,24 @@ class GoogleDocsBot(books_common.DataIO):
             userform_dict = userform_response['response'].get('result', {})
             userform_link = userform_dict['form_url']
             userform_id = userform_dict['form_id']
-        print(str(userform_dict))
-            
-        raise NotImplementedError('Abstract method "createUser" not completely implemented')
+
+        user_record = [userName, userEmail, userform_link, userform_id]
+
+        rangeBase = 'A'
+        newRecordNumber = str(len(existingUserNames) + 1)
+        rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + newRecordNumber + ':' + self.userSheetWidth + newRecordNumber
+        sheetId = self.getBookClubInfoSheetID()
+        update_body = {
+            "range": rangeStr,
+            "majorDimension": "ROWS",
+            "values": [user_record],
+        }
+        update_request = self.sheets_service.spreadsheets().values().update(
+            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
+
+        update_response = try_request_n_retries(update_request, 5)
+
+        return books_common.User(userName, userEmail, [], userform_link)
 
     def removeBook(self, book):
         raise NotImplementedError('Abstract method "removeBook" not implemented')
