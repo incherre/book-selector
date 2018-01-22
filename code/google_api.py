@@ -3,6 +3,7 @@ import books_common
 import os
 import httplib2
 import time
+import string
 
 from apiclient import discovery
 from apiclient import errors
@@ -47,6 +48,21 @@ def try_request_n_retries(request, times):
         else:
             return result
 
+def colNumber2colLetter(colNumber):
+    colLetter = ''
+    unconverted_part = colNumber
+    while unconverted_part > 0:
+        letter_index = (unconverted_part - 1) % 26
+        colLetter = string.ascii_uppercase[letter_index] + colLetter
+        unconverted_part = int((unconverted_part - letter_index - 1) / 26)
+    return colLetter
+
+def getA1Notation(sheetName, col1, row1, col2, row2):
+    A1notation = "'" + sheetName + "'!"
+    A1notation += colNumber2colLetter(col1) + str(row1) + ':'
+    A1notation += colNumber2colLetter(col2) + str(row2)
+    return A1notation
+
 class AppsScriptError(Exception):
     pass
 
@@ -73,8 +89,8 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/userinfo.email']
 
     infoSpreadNames = ('BookClubInfo', 'Users', 'History')
-    userSheetWidth = 'D'
-    historySheetWidth = 'D'
+    userSheetWidth = 4
+    historySheetWidth = 4
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -134,6 +150,55 @@ class GoogleDocsBot(books_common.DataIO):
             nextPageToken = files_results.get('nextPageToken')
 
         return files
+    
+    def getBookClubInfoSheetID(self):
+        '''Returns the file id of the sheet used to store book club information.'''
+
+        if not hasattr(self, 'bookClubInfoSheetID'):
+            files = self.getFileList()
+            self.bookClubInfoSheetID = None
+            if files:
+                for item in files:
+                    if item['name'] == self.infoSpreadNames[0]:
+                        self.bookClubInfoSheetID = item['id']
+
+            if not self.bookClubInfoSheetID:
+                del self.bookClubInfoSheetID
+                raise SpreadsheetFormatError('No User spreadsheet found.')
+
+        return self.bookClubInfoSheetID
+
+    def getUserTable(self, retryGet=5, fetchNum=10):
+        '''Returns a matrix of user records.'''
+
+        if not hasattr(self, 'userTable'):
+            userSheetId = self.getBookClubInfoSheetID()
+
+            rangeStart = 1
+            userInfo = []
+        
+            rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + fetchNum - 1))
+            request = self.sheets_service.spreadsheets().values().get(
+                majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
+            result = try_request_n_retries(request, retryGet)
+            values = result.get('values', [])
+
+            while values != []:
+                for user in values:
+                    if user != []:
+                        userInfo.append(user)
+
+                rangeStart += fetchNum
+                rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + fetchNum - 1))
+
+                request = self.sheets_service.spreadsheets().values().get(
+                    majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
+                result = try_request_n_retries(request, retryGet)
+                values = result.get('values', [])
+                
+            self.userTable = userInfo
+
+        return self.userTable
 
     def makeNewBookClub(self, shouldPrint=True, retryShare=5):
         '''Creates the document structure for a new book club. Returns success.'''
@@ -192,78 +257,27 @@ class GoogleDocsBot(books_common.DataIO):
 
         return True
 
-    def getBookClubInfoSheetID(self):
-        '''Returns the file id of the sheet used to store book club information.'''
-
-        if not hasattr(self, 'bookClubInfoSheetID'):
-            files = self.getFileList()
-            self.bookClubInfoSheetID = None
-            if files:
-                for item in files:
-                    if item['name'] == self.infoSpreadNames[0]:
-                        self.bookClubInfoSheetID = item['id']
-
-            if not self.bookClubInfoSheetID:
-                del self.bookClubInfoSheetID
-                raise SpreadsheetFormatError('No User spreadsheet found.')
-
-        return self.bookClubInfoSheetID
-
     def getUserNames(self, retryGet=5, fetchNum=10):
         '''Returns a list of usernames. Optional parameter fetchNum controls how many are fetched at once.'''
 
-        userSheetId = self.getBookClubInfoSheetID()
+        userTable = self.getUserTable(retryGet=retryGet, fetchNum=fetchNum)
 
-        rangeBase = 'A'
-        rangeStart = 1
-        userNames = []
-
-        rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
-        request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-        result = try_request_n_retries(request, retryGet)
-        values = result.get('values', [])
-
-        while values != []:
-            for value in values:
-                if value != []:
-                    userNames.append(value[0])
-
-            rangeStart += fetchNum
-            rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + str(rangeStart) + ':' + rangeBase + str(rangeStart + fetchNum - 1)
-
-            request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-            result = try_request_n_retries(request, retryGet)
-            values = result.get('values', [])
+        userNames = [i[0] for i in userTable]
 
         return userNames
 
     def getUserInfo(self, userName, retryGet=5, fetchNum=10):
         '''Returns a user's information. Optional parameter fetchNum controls how many are fetched at once.'''
 
-        userSheetId = self.getBookClubInfoSheetID()
-
-        rangeBase = 'A'
-        rangeStart = 1
         userInfo = []
+        userTable = self.getUserTable(retryGet=retryGet, fetchNum=fetchNum)
 
-        rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + str(rangeStart) + ':' + self.userSheetWidth + str(rangeStart + fetchNum - 1)
-        request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-        result = try_request_n_retries(request, retryGet)
-        values = result.get('values', [])
+        for user in userTable:
+            if user[0] == userName:
+                userInfo = user
+                break
 
-        while values != []:
-            for user in values:
-                if user != [] and user[0] == userName:
-                    userInfo = user
-
-            rangeStart += fetchNum
-            rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + str(rangeStart) + ':' + self.userSheetWidth + str(rangeStart + fetchNum - 1)
-
-            request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
-            result = try_request_n_retries(request, retryGet)
-            values = result.get('values', [])
-
-        if len(userInfo) == 3:
+        if len(userInfo) >= self.userSheetWidth:
             return books_common.User(userInfo[0], userInfo[1], [], userInfo[2])
         else:
             return userInfo
@@ -276,12 +290,12 @@ class GoogleDocsBot(books_common.DataIO):
 
         userSheetId = self.getBookClubInfoSheetID()
 
-        rangeBase = 'A'
         rangeStart = 1
         history = []
 
-        rangeStr = self.infoSpreadNames[2] + '!' + rangeBase + str(rangeStart) + ':' + self.historySheetWidth + str(rangeStart + fetchNum - 1)
-        request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+        rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + fetchNum - 1))
+        request = self.sheets_service.spreadsheets().values().get(
+            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
         result = try_request_n_retries(request, retryGet)
         values = result.get('values', [])
 
@@ -291,9 +305,10 @@ class GoogleDocsBot(books_common.DataIO):
                     history.append(book)
 
             rangeStart += fetchNum
-            rangeStr = self.infoSpreadNames[2] + '!' + rangeBase + str(rangeStart) + ':' + self.historySheetWidth + str(rangeStart + fetchNum - 1)
+            rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + fetchNum - 1))
 
-            request = self.sheets_service.spreadsheets().values().get(spreadsheetId=userSheetId, range=rangeStr)
+            request = self.sheets_service.spreadsheets().values().get(
+                majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
             result = try_request_n_retries(request, retryGet)
             values = result.get('values', [])
 
@@ -326,9 +341,8 @@ class GoogleDocsBot(books_common.DataIO):
 
         user_record = [userName, userEmail, userform_link, userform_id]
 
-        rangeBase = 'A'
-        newRecordNumber = str(len(existingUserNames) + 1)
-        rangeStr = self.infoSpreadNames[1] + '!' + rangeBase + newRecordNumber + ':' + self.userSheetWidth + newRecordNumber
+        newRecordNumber = len(existingUserNames) + 1
+        rangeStr = getA1Notation(self.infoSpreadNames[1], 1, newRecordNumber, self.userSheetWidth, newRecordNumber)
         sheetId = self.getBookClubInfoSheetID()
         update_body = {
             "range": rangeStr,
@@ -339,6 +353,8 @@ class GoogleDocsBot(books_common.DataIO):
             spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
 
         update_response = try_request_n_retries(update_request, 5)
+
+        self.userTable.append(user_record)
 
         return books_common.User(userName, userEmail, [], userform_link)
 
