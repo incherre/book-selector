@@ -69,14 +69,26 @@ class AppsScriptError(Exception):
 class SpreadsheetFormatError(Exception):
     pass
 
-class SheetsLocation(books_common.Location):
+class FormLocation(books_common.Location):
     '''A class representing where a book is stored when used with GoogleDocsBot.'''
 
-    def __init__(self):
-        raise NotImplementedError('Abstract method "__init__" not implemented')
+    def __init__(self, formId, responseId):
+        if isinstance(formId, str):
+            self.formId = formId
+        else:
+            raise TypeError("Provided form ID not a string.")
+
+        if isinstance(responseId, str):
+            self.responseId = responseId
+        else:
+            raise TypeError("Provided response ID not a string.")
 
     def compare(self, other):
-        raise NotImplementedError('Abstract method "compare" not implemented')
+        same = True
+        same = same and isinstance(other, FormLocation)
+        same = same and self.formId == other.formId
+        same = same and self.responseId == other.responseId
+        return same
 
 class GoogleDocsBot(books_common.DataIO):
     '''A class representing the functions to communicate with Google Drive.'''
@@ -175,7 +187,7 @@ class GoogleDocsBot(books_common.DataIO):
             userSheetId = self.getBookClubInfoSheetID()
 
             rangeStart = 1
-            userInfo = []
+            userInfo = {}
         
             rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + fetchNum - 1))
             request = self.sheets_service.spreadsheets().values().get(
@@ -186,7 +198,7 @@ class GoogleDocsBot(books_common.DataIO):
             while values != []:
                 for user in values:
                     if user != []:
-                        userInfo.append(user)
+                        userInfo[user[0]] = user
 
                 rangeStart += fetchNum
                 rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + fetchNum - 1))
@@ -262,7 +274,7 @@ class GoogleDocsBot(books_common.DataIO):
 
         userTable = self.getUserTable(retryGet=retryGet, fetchNum=fetchNum)
 
-        userNames = [i[0] for i in userTable]
+        userNames = list(userTable.keys())
 
         return userNames
 
@@ -272,18 +284,42 @@ class GoogleDocsBot(books_common.DataIO):
         userInfo = []
         userTable = self.getUserTable(retryGet=retryGet, fetchNum=fetchNum)
 
-        for user in userTable:
-            if user[0] == userName:
-                userInfo = user
-                break
+        if userName in userTable:
+            userInfo = userTable[userName]
 
         if len(userInfo) >= self.userSheetWidth:
             return books_common.User(userInfo[0], userInfo[1], [], userInfo[2])
         else:
             return userInfo
 
-    def getUserBooks(self, user):
-        raise NotImplementedError('Abstract method "getUserBooks" not implemented')
+    def getUserBooks(self, user, retryGet=5, fetchNum=10):
+        '''Returns the list of books entered by the user and updates the user object's book list.'''
+
+        userName = user.getUserName()
+        userFormID = None
+        userTable = self.getUserTable(retryGet=retryGet, fetchNum=fetchNum)
+
+        if userName in userTable:
+            userFormID = userTable[userName][3]
+        else:
+            raise SpreadsheetFormatError('Requested User does not exist.')
+
+        getbooks_function = {"function": "getBookList", "parameters": [userFormID]}
+        getbooks_request = self.appsscript_service.scripts().run(body=getbooks_function,scriptId=self.script_id)
+        getbooks_response = try_request_n_retries(getbooks_request, 5)
+
+        if 'error' in getbooks_response:
+            error = getbooks_response['error']['details'][0]
+            raise AppsScriptError(error)
+        else:
+            rawbooks_list = getbooks_response['response'].get('result', [])
+            books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
+                                            FormLocation(i['formResponseId'], userFormID), self)
+                          for i in rawbooks_list]
+
+        user.replaceBooks(books_list)
+
+        return books_list
 
     def getHistory(self, retryGet=5, fetchNum=10):
         '''Gets a list of books that have previously won a contest.'''
@@ -354,7 +390,7 @@ class GoogleDocsBot(books_common.DataIO):
 
         update_response = try_request_n_retries(update_request, 5)
 
-        self.userTable.append(user_record)
+        self.userTable[userName] = user_record
 
         return books_common.User(userName, userEmail, [], userform_link)
 
