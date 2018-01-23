@@ -99,6 +99,14 @@ class User:
         '''Returns the link to the form the user uses to input books.'''
         return self.formLink
 
+    def replaceBooks(self, newBooks):
+        '''Replaces the book list with the one provided.'''
+        if isinstance(newBooks, list) and (len(newBooks) == 0 or isinstance(newBooks[0], Book)):
+            self.books = newBooks
+            self.numBooks = len(newBooks)
+        else:
+            raise TypeError("Provided book list not a list of books.")
+
 class Date:
     '''A class representing when a poll happened.'''
 

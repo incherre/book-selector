@@ -177,9 +177,13 @@ class TestUserMethods(unittest.TestCase):
         with self.assertRaises(TypeError):
             testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink)        
 
-    def test_init_fail_invalid_books(self):
+    def test_init_fail_no_books(self):
         with self.assertRaises(TypeError):
             testVar = books_common.User(self.t_userName, self.t_userEmail, None, self.t_formLink)
+
+    def test_init_fail_bad_books(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(self.t_userName, self.t_userEmail, [None], self.t_formLink)
 
     def test_init_fail_invalid_formLink(self):
         with self.assertRaises(TypeError):
@@ -202,6 +206,20 @@ class TestUserMethods(unittest.TestCase):
 
     def test_getFormLink(self):
         self.assertEqual(self.t_user.getFormLink(), self.t_formLink)
+
+    def test_replaceBooks(self):
+        self.t_user.replaceBooks([])
+
+        self.assertEqual(self.t_user.books, [])
+        self.assertEqual(self.t_user.numBooks, 0)
+
+    def test_replaceBooks_fail_no_books(self):
+        with self.assertRaises(TypeError):
+            self.t_user.replaceBooks(None)
+
+    def test_replaceBooks_fail_bad_books(self):
+        with self.assertRaises(TypeError):
+            self.t_user.replaceBooks([None])
 
 class TestDateMethods(unittest.TestCase):
     def setUp(self):
