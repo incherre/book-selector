@@ -133,3 +133,28 @@ function getBookList(form_id) {
   
   return books;
 }
+
+/**
+ * Removes a response from a book 
+ * A little odd because as of writing there is no apps script function for deleting only one form response.
+ */
+
+function delResponse(form_id, response_id) {
+  var form = FormApp.openById(form_id);
+  var formResponses = form.getResponses();
+  
+  form.deleteAllResponses();
+  
+  for (var i = 0; i < formResponses.length; i++) {
+    if (formResponses[i].getId() != response_id) {
+      var newResponse = form.createResponse();
+      var itemResponses = formResponses[i].getItemResponses();
+      for (var j = 0; j < itemResponses.length; j++) {
+        newResponse.withItemResponse(itemResponses[j]);
+      }
+      newResponse.submit();
+    }
+  }
+  
+  return true;
+}

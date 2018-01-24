@@ -314,7 +314,7 @@ class GoogleDocsBot(books_common.DataIO):
         else:
             rawbooks_list = getbooks_response['response'].get('result', [])
             books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
-                                            FormLocation(i['formResponseId'], userFormID), self)
+                                            FormLocation(userFormID, i['formResponseId']), self)
                           for i in rawbooks_list]
 
         user.replaceBooks(books_list)
@@ -395,7 +395,24 @@ class GoogleDocsBot(books_common.DataIO):
         return books_common.User(userName, userEmail, [], userform_link)
 
     def removeBook(self, book):
-        raise NotImplementedError('Abstract method "removeBook" not implemented')
+        '''Deletes a book from a user's remote list.'''
+        
+        loc = book.location
+        if not isinstance(loc, FormLocation):
+            raise TypeError('Provided book has an incompatible location type.')
+
+        formId = loc.formId
+        responseId = loc.responseId
+
+        delbook_function = {"function": "delResponse", "parameters": [formId, responseId]}
+        delbook_request = self.appsscript_service.scripts().run(body=delbook_function,scriptId=self.script_id)
+        delbook_response = try_request_n_retries(delbook_request, 5)
+
+        if 'error' in delbook_response:
+            error = delbook_response['error']['details'][0]
+            raise AppsScriptError(error)
+        else:
+            return True
 
     def newPoll(self, poll):
         raise NotImplementedError('Abstract method "newPoll" not implemented')
