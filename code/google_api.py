@@ -162,7 +162,7 @@ class GoogleDocsBot(books_common.DataIO):
             nextPageToken = files_results.get('nextPageToken')
 
         return files
-    
+
     def getBookClubInfoSheetID(self):
         '''Returns the file id of the sheet used to store book club information.'''
 
@@ -188,7 +188,7 @@ class GoogleDocsBot(books_common.DataIO):
 
             rangeStart = 1
             userInfo = {}
-        
+
             rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + fetchNum - 1))
             request = self.sheets_service.spreadsheets().values().get(
                 majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
@@ -207,7 +207,7 @@ class GoogleDocsBot(books_common.DataIO):
                     majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
                 result = try_request_n_retries(request, retryGet)
                 values = result.get('values', [])
-                
+
             self.userTable = userInfo
 
         return self.userTable
@@ -324,31 +324,34 @@ class GoogleDocsBot(books_common.DataIO):
     def getHistory(self, retryGet=5, fetchNum=10):
         '''Gets a list of books that have previously won a contest.'''
 
-        userSheetId = self.getBookClubInfoSheetID()
+        if not hasattr(self, 'history'):
+            userSheetId = self.getBookClubInfoSheetID()
 
-        rangeStart = 1
-        history = []
+            rangeStart = 1
+            history = []
 
-        rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + fetchNum - 1))
-        request = self.sheets_service.spreadsheets().values().get(
-            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-        result = try_request_n_retries(request, retryGet)
-        values = result.get('values', [])
-
-        while values != []:
-            for book in values:
-                if book != []:
-                    history.append(book)
-
-            rangeStart += fetchNum
             rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + fetchNum - 1))
-
             request = self.sheets_service.spreadsheets().values().get(
                 majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
             result = try_request_n_retries(request, retryGet)
             values = result.get('values', [])
 
-        return history
+            while values != []:
+                for book in values:
+                    if book != []:
+                        history.append(book)
+
+                rangeStart += fetchNum
+                rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + fetchNum - 1))
+
+                request = self.sheets_service.spreadsheets().values().get(
+                    majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
+                result = try_request_n_retries(request, retryGet)
+                values = result.get('values', [])
+
+            self.history = history
+
+        return self.history
 
     def getCurrentPoll(self):
         raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
@@ -357,7 +360,7 @@ class GoogleDocsBot(books_common.DataIO):
         '''Creates all the data entries for a new user.'''
 
         existingUserNames = self.getUserNames()
-        
+
         if userName in existingUserNames:
             if shouldPrint:
                 print('User already exists.')
@@ -396,7 +399,7 @@ class GoogleDocsBot(books_common.DataIO):
 
     def removeBook(self, book):
         '''Deletes a book from a user's remote list.'''
-        
+
         loc = book.location
         if not isinstance(loc, FormLocation):
             raise TypeError('Provided book has an incompatible location type.')
@@ -421,4 +424,24 @@ class GoogleDocsBot(books_common.DataIO):
         raise NotImplementedError('Abstract method "closePoll" not implemented')
 
     def addWinner(self, book):
-        raise NotImplementedError('Abstract method "addWinner" not implemented')
+        '''Adds a winner to the history file.'''
+
+        history = self.getHistory()
+        date = time.strftime('%Y/%m/%d')
+
+        winner_record = [date, book.getTitle(), book.getAuthorFName(), book.getAuthorLName()]
+
+        newRecordNumber = len(history) + 1
+        rangeStr = getA1Notation(self.infoSpreadNames[2], 1, newRecordNumber, self.historySheetWidth, newRecordNumber)
+        sheetId = self.getBookClubInfoSheetID()
+        update_body = {
+            "range": rangeStr,
+            "majorDimension": "ROWS",
+            "values": [winner_record],
+        }
+        update_request = self.sheets_service.spreadsheets().values().update(
+            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
+
+        update_response = try_request_n_retries(update_request, 5)
+
+        self.history.append(winner_record)
