@@ -44,6 +44,14 @@ class Book:
         '''Returns the author's name.'''
         return self.authorFname + " " + self.authorLname
 
+    def getAuthorFName(self):
+        '''Returns the author's first name.'''
+        return self.authorFname
+
+    def getAuthorLName(self):
+        '''Returns the author's last name.'''
+        return self.authorLname
+
     def compare(self, other):
         '''Compares to another book. Books with the same title and author are considered equal.'''
         ret = isinstance(other, Book)

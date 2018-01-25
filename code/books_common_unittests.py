@@ -97,7 +97,7 @@ class TestBookMethods(unittest.TestCase):
         del self.basicBook
         del self.succeedBook
         del self.failBook
-    
+
     def test_init(self):
         testVar = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, self.t_data_io)
         self.assertIsInstance(testVar, books_common.Book)
@@ -121,7 +121,7 @@ class TestBookMethods(unittest.TestCase):
     def test_init_fail_invalid_data_io(self):
         with self.assertRaises(TypeError):
             testVar = books_common.Book(self.t_title,  self.t_authorFname, self.t_authorLname, self.t_location, None)
-        
+
     def test_delete(self):
         self.assertTrue(self.succeedBook.delete())
         self.assertFalse(self.failBook.delete())
@@ -132,6 +132,12 @@ class TestBookMethods(unittest.TestCase):
     def test_getAuthorName(self):
         author = self.t_authorFname + " " + self.t_authorLname
         self.assertEqual(self.basicBook.getAuthorName(), author)
+
+    def test_getAuthorFName(self):
+        self.assertEqual(self.basicBook.getAuthorFName(), self.t_authorFname)
+
+    def test_getAuthorLName(self):
+        self.assertEqual(self.basicBook.getAuthorLName(), self.t_authorLname)
 
     def test_compare(self):
         other = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, self.t_data_io)
@@ -149,7 +155,7 @@ class TestBookMethods(unittest.TestCase):
 class TestUserMethods(unittest.TestCase):
     def setUp(self):
         abook = books_common.Book("title", "fName", "lName", BaseLocationWithoutErrorInit(), BaseDataIOWithoutErrorInit())
-        
+
         self.t_userName = "uName"
         self.t_userEmail = "an.email@example.com"
         self.t_books = [abook]
@@ -164,7 +170,7 @@ class TestUserMethods(unittest.TestCase):
         del self.t_formLink
 
         del self.t_user
-    
+
     def test_init(self):
         testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink)
         self.assertIsInstance(testVar, books_common.User)
@@ -175,7 +181,7 @@ class TestUserMethods(unittest.TestCase):
 
     def test_init_fail_invalid_userEmail(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink)        
+            testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink)
 
     def test_init_fail_no_books(self):
         with self.assertRaises(TypeError):
@@ -237,7 +243,7 @@ class TestDateMethods(unittest.TestCase):
         del self.t_strDate
 
         del self.t_date
-        
+
     def test_init(self):
         testVar = books_common.Date(self.t_year, self.t_month, self.t_day)
         self.assertIsInstance(testVar, books_common.Date)
@@ -303,7 +309,7 @@ class TestPollMethods(unittest.TestCase):
         self.t_book1 = books_common.Book("opt1", "fn", "ln", location, data_io)
         self.t_book2 = books_common.Book("opt2", "fn", "ln", location, data_io)
         self.t_book3 = books_common.Book("opt3", "fn", "ln", location, data_io)
-        
+
         self.t_options = [self.t_book1, self.t_book2, self.t_book3]
         self.t_scores = [0, 0, 0]
         self.t_formLink = "www.example.com"
@@ -397,7 +403,7 @@ class TestPollMethods(unittest.TestCase):
         self.assertFalse(hasattr(testPoll, 'winner'))
         for i in range(len(testPoll.scores)):
             self.assertEqual(newScores[i], testPoll.scores[i])
-        
+
 class TestLocationMethods(unittest.TestCase):
     def test_basic_init(self):
         with self.assertRaises(NotImplementedError):
@@ -407,7 +413,7 @@ class TestLocationMethods(unittest.TestCase):
         testLoc1 = BaseLocationWithoutErrorInit()
         testLoc2 = BaseLocationWithoutErrorInit()
         with self.assertRaises(NotImplementedError):
-            testLoc1.compare(testLoc2)     
+            testLoc1.compare(testLoc2)
 
 class TestDataIOMethods(unittest.TestCase):
     def test_basic_init(self):
