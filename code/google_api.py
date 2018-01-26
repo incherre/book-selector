@@ -40,6 +40,11 @@ def try_request_n_retries(request, times):
     for i in range(times):
         try:
             result = request.execute()
+
+            if 'error' in result:
+                error = result['error']['details'][0]
+                raise AppsScriptError(error)
+            
         except errors.HttpError:
             if i == times - 1:
                 raise
@@ -100,9 +105,10 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/forms',
                         'https://www.googleapis.com/auth/userinfo.email']
 
-    infoSpreadNames = ('BookClubInfo', 'Users', 'History')
+    infoSpreadNames = ('BookClubInfo', 'Users', 'History', 'GlobalInfo')
     userSheetWidth = 4
     historySheetWidth = 4
+    pollIdPos = (1, 1)
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -134,11 +140,7 @@ class GoogleDocsBot(books_common.DataIO):
             email_response = self.appsscript_service.scripts().run(
                 body=email_request,scriptId=self.script_id).execute()
 
-            if 'error' in email_response:
-                error = email_response['error']['details'][0]
-                raise AppsScriptError(error)
-            else:
-                self.admin_email = email_response['response'].get('result', str)
+            self.admin_email = email_response['response'].get('result', str)
 
             if self.admin_email == '':
                 raise AppsScriptError('Failed to retrieve user email.')
@@ -308,14 +310,10 @@ class GoogleDocsBot(books_common.DataIO):
         getbooks_request = self.appsscript_service.scripts().run(body=getbooks_function,scriptId=self.script_id)
         getbooks_response = try_request_n_retries(getbooks_request, 5)
 
-        if 'error' in getbooks_response:
-            error = getbooks_response['error']['details'][0]
-            raise AppsScriptError(error)
-        else:
-            rawbooks_list = getbooks_response['response'].get('result', [])
-            books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
-                                            FormLocation(userFormID, i['formResponseId']), self)
-                          for i in rawbooks_list]
+        rawbooks_list = getbooks_response['response'].get('result', [])
+        books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
+                                        FormLocation(userFormID, i['formResponseId']), self)
+                      for i in rawbooks_list]
 
         user.replaceBooks(books_list)
 
@@ -353,9 +351,6 @@ class GoogleDocsBot(books_common.DataIO):
 
         return self.history
 
-    def getCurrentPoll(self):
-        raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
-
     def createUser(self, userName, userEmail, shouldPrint=True):
         '''Creates all the data entries for a new user.'''
 
@@ -370,13 +365,9 @@ class GoogleDocsBot(books_common.DataIO):
         userform_request = self.appsscript_service.scripts().run(body=userform_function,scriptId=self.script_id)
         userform_response = try_request_n_retries(userform_request, 5)
 
-        if 'error' in userform_response:
-            error = userform_response['error']['details'][0]
-            raise AppsScriptError(error)
-        else:
-            userform_dict = userform_response['response'].get('result', {})
-            userform_link = userform_dict['form_url']
-            userform_id = userform_dict['form_id']
+        userform_dict = userform_response['response'].get('result', {})
+        userform_link = userform_dict['form_url']
+        userform_id = userform_dict['form_id']
 
         user_record = [userName, userEmail, userform_link, userform_id]
 
@@ -411,17 +402,7 @@ class GoogleDocsBot(books_common.DataIO):
         delbook_request = self.appsscript_service.scripts().run(body=delbook_function,scriptId=self.script_id)
         delbook_response = try_request_n_retries(delbook_request, 5)
 
-        if 'error' in delbook_response:
-            error = delbook_response['error']['details'][0]
-            raise AppsScriptError(error)
-        else:
-            return True
-
-    def newPoll(self, poll):
-        raise NotImplementedError('Abstract method "newPoll" not implemented')
-
-    def closePoll(self, poll):
-        raise NotImplementedError('Abstract method "closePoll" not implemented')
+        return True
 
     def addWinner(self, book):
         '''Adds a winner to the history file.'''
@@ -445,3 +426,50 @@ class GoogleDocsBot(books_common.DataIO):
         update_response = try_request_n_retries(update_request, 5)
 
         self.history.append(winner_record)
+
+    def getCurrentPoll(self, retryGet=5):
+        '''Returns the currently ongoing book poll.'''
+
+        userSheetId = self.getBookClubInfoSheetID()
+        
+        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.pollIdPos[0], self.pollIdPos[1])
+        request = self.sheets_service.spreadsheets().values().get(
+            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
+        result = try_request_n_retries(request, retryGet)
+        values = result.get('values', [])
+
+        currentPollId = ''
+        if values and values[0] and values[0][0]:
+            currentPollId = values[0][0]
+
+        if currentPollId == '':
+            return None
+
+        getpoll_function = {"function": "getPollInfo", "parameters": [currentPollId]}
+        getpoll_request = self.appsscript_service.scripts().run(body=getpoll_function,scriptId=self.script_id)
+        getpoll_response = try_request_n_retries(getpoll_request, 5)
+
+        pollDict = getpoll_response.['response'].get('result', {})
+        
+        options = []
+        scores = []
+        for i in range(len(pollDict['options'])):
+            title, author = pollDict['options'][i].split(' by ', maxsplit=1)
+            first, last = author.split(maxsplit=1)
+
+            options.append(books_common.Book(title, first, last, None, self))
+            scores.append(int(pollDict['scores'][i]))
+
+        formLink = pollDict['url']
+
+        dateCreated = books_common.Date(int(pollDict['date']['year']),
+                                        int(pollDict['date']['month']),
+                                        int(pollDict['date']['day']))
+
+        return books_common.Poll(options, scores, formLink, dateCreated, self)
+
+    def newPoll(self, poll):
+        raise NotImplementedError('Abstract method "newPoll" not implemented')
+
+    def closePoll(self, poll):
+        raise NotImplementedError('Abstract method "closePoll" not implemented')

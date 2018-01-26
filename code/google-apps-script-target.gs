@@ -158,3 +158,39 @@ function delResponse(form_id, response_id) {
   
   return true;
 }
+
+/**
+ * Gets the info for a book poll.
+ */
+
+function getPollInfo(form_id) {
+  var form = FormApp.openById(form_id);
+  var pollInfo = {};
+  
+  pollInfo.url = form.getPublishedUrl();
+  
+  var form_as_file = DriveApp.getFileById(form_id);
+  var dateCreated = form_as_file.getDateCreated();
+  pollInfo.date = {};
+  pollInfo.date.year = dateCreated.getFullYear();
+  pollInfo.date.month = dateCreated.getMonth() + 1;
+  pollInfo.date.day = dateCreated.getDate();
+  
+  var question = form.getItems()[0].asMultipleChoiceItem();
+  var choices = question.getChoices();
+  pollInfo.options = [];
+  pollInfo.scores = [];
+  for (var i = 0; i < choices.length; i++) {
+    pollInfo.options.push(choices[i].getValue().toString());
+    pollInfo.scores.push(0);
+  }
+  
+  var responses = form.getResponses();
+  for (var i = 0; i < responses.length; i++) {
+    var choice = responses[i].getItemResponses()[0].getResponse().toString();
+    var index = pollInfo.options.indexOf(choice);
+    pollInfo.scores[index]++;
+  }
+  
+  return pollInfo;
+}
