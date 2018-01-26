@@ -86,7 +86,8 @@ class TestBookMethods(unittest.TestCase):
         self.basicBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, self.t_data_io)
         self.succeedBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, DataIOAllSuccess())
         self.failBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, DataIOAllFail())
-
+        self.noLocBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, None, self.t_data_io)
+        
     def tearDown(self):
         del self.t_title
         del self.t_authorFname
@@ -97,9 +98,14 @@ class TestBookMethods(unittest.TestCase):
         del self.basicBook
         del self.succeedBook
         del self.failBook
+        del self.noLocBook
 
     def test_init(self):
         testVar = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, self.t_data_io)
+        self.assertIsInstance(testVar, books_common.Book)
+
+    def test_init_no_location(self):
+        testVar = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, None, self.t_data_io)
         self.assertIsInstance(testVar, books_common.Book)
 
     def test_init_fail_invalid_title(self):
@@ -116,7 +122,7 @@ class TestBookMethods(unittest.TestCase):
 
     def test_init_fail_invalid_location(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Book(self.t_title,  self.t_authorFname, self.t_authorLname, None, self.t_data_io)
+            testVar = books_common.Book(self.t_title,  self.t_authorFname, self.t_authorLname, 'Not_a_location', self.t_data_io)
 
     def test_init_fail_invalid_data_io(self):
         with self.assertRaises(TypeError):
@@ -125,6 +131,7 @@ class TestBookMethods(unittest.TestCase):
     def test_delete(self):
         self.assertTrue(self.succeedBook.delete())
         self.assertFalse(self.failBook.delete())
+        self.assertFalse(self.noLocBook.delete())
 
     def test_getTitle(self):
         self.assertEqual(self.basicBook.getTitle(), self.t_title)

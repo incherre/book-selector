@@ -21,7 +21,7 @@ class Book:
         else:
             raise TypeError("Provided author's last name not a string.")
 
-        if isinstance(location, Location):
+        if isinstance(location, Location) or location == None:
             self.location = location
         else:
             raise TypeError("Provided location not a Location object.")
@@ -34,7 +34,10 @@ class Book:
 
     def delete(self):
         '''Removes this book from the database. Returns success.'''
-        return self.data_io.removeBook(self)
+        if self.location != None:
+            return self.data_io.removeBook(self)
+        else:
+            return False
 
     def getTitle(self):
         '''Returns the title of this book.'''
