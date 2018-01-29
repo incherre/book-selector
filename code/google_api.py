@@ -449,13 +449,13 @@ class GoogleDocsBot(books_common.DataIO):
         getpoll_request = self.appsscript_service.scripts().run(body=getpoll_function,scriptId=self.script_id)
         getpoll_response = try_request_n_retries(getpoll_request, 5)
 
-        pollDict = getpoll_response.['response'].get('result', {})
+        pollDict = getpoll_response['response'].get('result', {})
         
         options = []
         scores = []
         for i in range(len(pollDict['options'])):
-            title, author = pollDict['options'][i].split(' by ', maxsplit=1)
-            first, last = author.split(maxsplit=1)
+            title, author = pollDict['options'][i].split(': ', maxsplit=1)
+            last, first = author.split(', ', maxsplit=1)
 
             options.append(books_common.Book(title, first, last, None, self))
             scores.append(int(pollDict['scores'][i]))
@@ -468,8 +468,36 @@ class GoogleDocsBot(books_common.DataIO):
 
         return books_common.Poll(options, scores, formLink, dateCreated, self)
 
-    def newPoll(self, poll):
-        raise NotImplementedError('Abstract method "newPoll" not implemented')
+    def newPoll(self, options):
+        '''Replaces the old poll with the provided poll. closePoll should often be called on the old poll first.'''
+
+        stringOptions = [i.getTitle() + ': ' + i.getAuthorLName() + ', ' + i.getAuthorFName() for i in options]
+
+        makepoll_function = {"function": "makePollForm", "parameters": [self.service_email, stringOptions]}
+        makepoll_request = self.appsscript_service.scripts().run(body=makepoll_function,scriptId=self.script_id)
+        makepoll_response = try_request_n_retries(makepoll_request, 5)
+
+        pollform_dict = makepoll_response['response'].get('result', {})
+        pollform_link = pollform_dict['form_url']
+        pollform_id = pollform_dict['form_id']
+
+        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.pollIdPos[0], self.pollIdPos[1])
+        sheetId = self.getBookClubInfoSheetID()
+        update_body = {
+            "range": rangeStr,
+            "majorDimension": "ROWS",
+            "values": [[pollform_id]],
+        }
+        update_request = self.sheets_service.spreadsheets().values().update(
+            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
+        update_response = try_request_n_retries(update_request, 5)
+
+        scores = [0] * len(options)
+
+        now = time.localtime()
+        dateCreated = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
+
+        return books_common.Poll(options, scores, pollform_link, dateCreated, self)
 
     def closePoll(self, poll):
         raise NotImplementedError('Abstract method "closePoll" not implemented')
