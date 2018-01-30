@@ -109,6 +109,7 @@ class GoogleDocsBot(books_common.DataIO):
     userSheetWidth = 4
     historySheetWidth = 4
     pollIdPos = (1, 1)
+    locationWidth = 3
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -450,14 +451,26 @@ class GoogleDocsBot(books_common.DataIO):
         getpoll_response = try_request_n_retries(getpoll_request, 5)
 
         pollDict = getpoll_response['response'].get('result', {})
+
+        numOptions = len(pollDict['options'])
+        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1] + 1, self.locationWidth, numOptions + 1)
+        request = self.sheets_service.spreadsheets().values().get(
+            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
+        result = try_request_n_retries(request, retryGet)
+        values = result.get('values', [])
+
+        locDict = {}
+        for row in values:
+            locDict[row[0]] = FormLocation(row[1], row[2])
         
         options = []
         scores = []
         for i in range(len(pollDict['options'])):
-            title, author = pollDict['options'][i].split(': ', maxsplit=1)
+            idString = pollDict['options'][i]
+            title, author = idString.split(': ', maxsplit=1)
             last, first = author.split(', ', maxsplit=1)
 
-            options.append(books_common.Book(title, first, last, None, self))
+            options.append(books_common.Book(title, first, last, locDict[idString], self))
             scores.append(int(pollDict['scores'][i]))
 
         formLink = pollDict['url']
@@ -471,7 +484,14 @@ class GoogleDocsBot(books_common.DataIO):
     def newPoll(self, options):
         '''Replaces the old poll with the provided poll. closePoll should often be called on the old poll first.'''
 
-        stringOptions = [i.getTitle() + ': ' + i.getAuthorLName() + ', ' + i.getAuthorFName() for i in options]
+        stringOptions = []
+        locationData = []
+        for i in options:
+            identifier = i.getTitle() + ': ' + i.getAuthorLName() + ', ' + i.getAuthorFName()
+            stringOptions.append(identifier)
+
+            loc = i.location
+            locationData.append([identifier, loc.formId, loc.responseId])
 
         makepoll_function = {"function": "makePollForm", "parameters": [self.service_email, stringOptions]}
         makepoll_request = self.appsscript_service.scripts().run(body=makepoll_function,scriptId=self.script_id)
@@ -481,12 +501,12 @@ class GoogleDocsBot(books_common.DataIO):
         pollform_link = pollform_dict['form_url']
         pollform_id = pollform_dict['form_id']
 
-        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.pollIdPos[0], self.pollIdPos[1])
+        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.locationWidth, len(locationData) + 1)
         sheetId = self.getBookClubInfoSheetID()
         update_body = {
             "range": rangeStr,
             "majorDimension": "ROWS",
-            "values": [[pollform_id]],
+            "values": [[pollform_id]] + locationData,
         }
         update_request = self.sheets_service.spreadsheets().values().update(
             spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)

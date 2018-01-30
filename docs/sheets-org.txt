@@ -6,5 +6,5 @@ There is a spreadsheet called 'BookClubInfo'.
 	BookClubInfo has three sheets.
 	In the sheet named 'Users' each row has a username, email, book input form link, book input form file id (in that order)
 	In the sheet named 'History' each row contains the details of a book that has won the club's vote in the past.
-	In the sheet named 'GlobalInfo' in cell A1 is the file id of the current book poll.
+	In the sheet named 'GlobalInfo' in cell A1 is the file id of the current book poll. Contained in the following rows is the locations of books in the current book poll.
 
