@@ -320,55 +320,61 @@ class TestPollMethods(unittest.TestCase):
         self.t_options = [self.t_book1, self.t_book2, self.t_book3]
         self.t_scores = [0, 0, 0]
         self.t_formLink = "www.example.com"
+        self.t_formId = "4800063"
         self.t_dateCreated = books_common.Date(2000, 1, 1)
         self.t_data_io = data_io
 
-        self.t_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+        self.t_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def tearDown(self):
         del self.t_options
         del self.t_scores
         del self.t_formLink
+        del self.t_formId
         del self.t_dateCreated
         del self.t_data_io
 
         del self.t_poll
 
     def test_init(self):
-        testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+        testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
         self.assertIsInstance(testVar, books_common.Poll)
 
     def test_init_fail_no_options(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(None, self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll(None, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_invalid_options(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll([None, None], self.t_scores, self.t_formLink, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll([None, None], self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_no_scores(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, None, self.t_formLink, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll(self.t_options, None, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_invalid_scores(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, [None, None], self.t_formLink, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll(self.t_options, [None, None], self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_wrong_num_scores(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, [0], self.t_formLink, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll(self.t_options, [0], self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_no_link(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, self.t_scores, None, self.t_dateCreated, self.t_data_io)
+            testVar = books_common.Poll(self.t_options, self.t_scores, None, self.t_formId, self.t_dateCreated, self.t_data_io)
+
+    def test_init_fail_no_id(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, None, self.t_dateCreated, self.t_data_io)
 
     def test_init_fail_no_date(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, None, self.t_data_io)
+            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, None, self.t_data_io)
 
     def test_init_fail_no_data_io(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, None)
+            testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, None)
 
     def test_getWinner(self):
         self.t_poll.scores = [0, 0, 1]
@@ -383,10 +389,10 @@ class TestPollMethods(unittest.TestCase):
         del self.t_poll.winner
 
     def test_closeVoting(self):
-        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, DataIOAllSuccess())
+        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllSuccess())
         self.assertTrue(testPoll.closeVoting())
 
-        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_dateCreated, DataIOAllFail())
+        testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllFail())
         self.assertFalse(testPoll.closeVoting())
 
     def test_getFormLink(self):
@@ -402,8 +408,8 @@ class TestPollMethods(unittest.TestCase):
 
     def test_updateResults(self):
         newScores = [100, 101, 102]
-        bigPoll = books_common.Poll(self.t_options, newScores, self.t_formLink, self.t_dateCreated, self.t_data_io)
-        testPoll = books_common.Poll(self.t_options, [1, 0, 0], self.t_formLink, self.t_dateCreated, BaseDataIOReturnPoll(bigPoll))
+        bigPoll = books_common.Poll(self.t_options, newScores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
+        testPoll = books_common.Poll(self.t_options, [1, 0, 0], self.t_formLink, self.t_formId, self.t_dateCreated, BaseDataIOReturnPoll(bigPoll))
 
         testPoll.winner = self.t_book1
         testPoll.updateResults()
@@ -430,7 +436,7 @@ class TestDataIOMethods(unittest.TestCase):
     def setUp(self):
         self.testIO = BaseDataIOWithoutErrorInit()
         self.testBook = books_common.Book("Title", "Sarah", "Smith", BaseLocationWithoutErrorInit(), BaseDataIOWithoutErrorInit())
-        self.testPoll = books_common.Poll([self.testBook, self.testBook], [0, 0], "www.example.com", books_common.Date(2000, 1, 1), BaseDataIOWithoutErrorInit())
+        self.testPoll = books_common.Poll([self.testBook, self.testBook], [0, 0], "www.example.com", "4800063", books_common.Date(2000, 1, 1), BaseDataIOWithoutErrorInit())
 
     def tearDown(self):
         del self.testIO

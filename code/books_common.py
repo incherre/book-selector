@@ -160,7 +160,7 @@ class Date:
 class Poll:
     '''A class representing a preferred book poll.'''
 
-    def __init__(self, options, scores, formLink, dateCreated, data_io):
+    def __init__(self, options, scores, formLink, formId, dateCreated, data_io):
         if isinstance(options, list) and (len(options) == 0 or isinstance(options[0], Book)):
             self.options = options
         else:
@@ -175,6 +175,11 @@ class Poll:
             self.formLink = formLink
         else:
             raise TypeError("Provided link to form not a string.")
+
+        if isinstance(formId, str):
+            self.formId = formId
+        else:
+            raise TypeError("Provided form identification not a string.")
 
         if isinstance(dateCreated, Date):
             self.dateCreated = dateCreated
