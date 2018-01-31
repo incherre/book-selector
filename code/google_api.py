@@ -479,7 +479,7 @@ class GoogleDocsBot(books_common.DataIO):
                                         int(pollDict['date']['month']),
                                         int(pollDict['date']['day']))
 
-        return books_common.Poll(options, scores, formLink, dateCreated, self)
+        return books_common.Poll(options, scores, formLink, currentPollId, dateCreated, self)
 
     def newPoll(self, options):
         '''Replaces the old poll with the provided poll. closePoll should often be called on the old poll first.'''
@@ -517,7 +517,13 @@ class GoogleDocsBot(books_common.DataIO):
         now = time.localtime()
         dateCreated = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
 
-        return books_common.Poll(options, scores, pollform_link, dateCreated, self)
+        return books_common.Poll(options, scores, pollform_link, pollform_id, dateCreated, self)
 
     def closePoll(self, poll):
-        raise NotImplementedError('Abstract method "closePoll" not implemented')
+        '''Stops the poll from accepting responses.'''
+
+        pollId = poll.formId
+
+        closepoll_function = {"function": "closeForm", "parameters": [pollId]}
+        closepoll_request = self.appsscript_service.scripts().run(body=closepoll_function,scriptId=self.script_id)
+        closepoll_response = try_request_n_retries(closepoll_request, 5)

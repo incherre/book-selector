@@ -194,3 +194,13 @@ function getPollInfo(form_id) {
   
   return pollInfo;
 }
+
+/**
+ * Closes a form.
+ */
+
+function closeForm(form_id) {
+  var form = FormApp.openById(form_id);
+  
+  form.setAcceptingResponses(false);
+}
