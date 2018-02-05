@@ -31,19 +31,19 @@ class DataIOAllSuccess(books_common.DataIO):
     def __init__(self):
         pass
 
-    def createUser(self, user):
+    def create_user(self, user):
         return True
 
-    def removeBook(self, book):
+    def remove_book(self, book):
         return True
 
-    def newPoll(self, poll):
+    def new_poll(self, poll):
         return True
 
-    def closePoll(self, poll):
+    def close_poll(self, poll):
         return True
 
-    def addWinner(self, book):
+    def add_winner(self, book):
         return True
 
 class DataIOAllFail(books_common.DataIO):
@@ -51,26 +51,26 @@ class DataIOAllFail(books_common.DataIO):
     def __init__(self):
         pass
 
-    def createUser(self, user):
+    def create_user(self, user):
         return False
 
-    def removeBook(self, book):
+    def remove_book(self, book):
         return False
 
-    def newPoll(self, poll):
+    def new_poll(self, poll):
         return False
 
-    def closePoll(self, poll):
+    def close_poll(self, poll):
         return False
 
-    def addWinner(self, book):
+    def add_winner(self, book):
         return False
 
 class BaseDataIOReturnPoll(books_common.DataIO):
     def __init__(self, poll):
         self.poll = poll
 
-    def getCurrentPoll(self):
+    def get_current_poll(self):
         return self.poll
 
 ## End test implementations
@@ -87,7 +87,7 @@ class TestBookMethods(unittest.TestCase):
         self.succeedBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, DataIOAllSuccess())
         self.failBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, DataIOAllFail())
         self.noLocBook = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, None, self.t_data_io)
-        
+
     def tearDown(self):
         del self.t_title
         del self.t_authorFname
@@ -133,18 +133,18 @@ class TestBookMethods(unittest.TestCase):
         self.assertFalse(self.failBook.delete())
         self.assertFalse(self.noLocBook.delete())
 
-    def test_getTitle(self):
-        self.assertEqual(self.basicBook.getTitle(), self.t_title)
+    def test_get_title(self):
+        self.assertEqual(self.basicBook.get_title(), self.t_title)
 
-    def test_getAuthorName(self):
+    def test_get_author_name(self):
         author = self.t_authorFname + " " + self.t_authorLname
-        self.assertEqual(self.basicBook.getAuthorName(), author)
+        self.assertEqual(self.basicBook.get_author_name(), author)
 
     def test_getAuthorFName(self):
-        self.assertEqual(self.basicBook.getAuthorFName(), self.t_authorFname)
+        self.assertEqual(self.basicBook.get_author_first_name(), self.t_authorFname)
 
     def test_getAuthorLName(self):
-        self.assertEqual(self.basicBook.getAuthorLName(), self.t_authorLname)
+        self.assertEqual(self.basicBook.get_author_last_name(), self.t_authorLname)
 
     def test_compare(self):
         other = books_common.Book(self.t_title, self.t_authorFname, self.t_authorLname, self.t_location, self.t_data_io)
@@ -202,37 +202,37 @@ class TestUserMethods(unittest.TestCase):
         with self.assertRaises(TypeError):
             testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, None)
 
-    def test_getBooks(self):
-        maybe_books = self.t_user.getBooks()
+    def test_get_books(self):
+        maybe_books = self.t_user.get_books()
         self.assertIsInstance(maybe_books, list)
         self.assertEqual(len(maybe_books), 1)
         self.assertTrue(maybe_books[0].compare(self.t_books[0]))
 
-    def test_getUserName(self):
-        self.assertEqual(self.t_user.getUserName(), self.t_userName)
+    def test_get_user_name(self):
+        self.assertEqual(self.t_user.get_user_name(), self.t_userName)
 
-    def test_getUserEmail(self):
-        self.assertEqual(self.t_user.getUserEmail(), self.t_userEmail)
+    def test_get_user_email(self):
+        self.assertEqual(self.t_user.get_user_email(), self.t_userEmail)
 
-    def test_getNumBooks(self):
-        self.assertEqual(self.t_user.getNumBooks(), len(self.t_books))
+    def test_get_book_count(self):
+        self.assertEqual(self.t_user.get_book_count(), len(self.t_books))
 
-    def test_getFormLink(self):
-        self.assertEqual(self.t_user.getFormLink(), self.t_formLink)
+    def test_get_form_link(self):
+        self.assertEqual(self.t_user.get_form_link(), self.t_formLink)
 
-    def test_replaceBooks(self):
-        self.t_user.replaceBooks([])
+    def test_replace_books(self):
+        self.t_user.replace_books([])
 
         self.assertEqual(self.t_user.books, [])
-        self.assertEqual(self.t_user.numBooks, 0)
+        self.assertEqual(self.t_user.book_count, 0)
 
-    def test_replaceBooks_fail_no_books(self):
+    def test_replace_books_fail_no_books(self):
         with self.assertRaises(TypeError):
-            self.t_user.replaceBooks(None)
+            self.t_user.replace_books(None)
 
-    def test_replaceBooks_fail_bad_books(self):
+    def test_replace_books_fail_bad_books(self):
         with self.assertRaises(TypeError):
-            self.t_user.replaceBooks([None])
+            self.t_user.replace_books([None])
 
 class TestDateMethods(unittest.TestCase):
     def setUp(self):
@@ -283,17 +283,17 @@ class TestDateMethods(unittest.TestCase):
         with self.assertRaises(TypeError):
             testVar = books_common.Date(self.t_year, self.t_month, 32)
 
-    def test_getStringDate(self):
-        self.assertEqual(self.t_date.getStringDate(), self.t_strDate)
+    def test_get_string_date(self):
+        self.assertEqual(self.t_date.get_string_date(), self.t_strDate)
 
-    def test_getYear(self):
-        self.assertEqual(self.t_date.getYear(), self.t_year)
+    def test_get_year(self):
+        self.assertEqual(self.t_date.get_year(), self.t_year)
 
-    def test_getMonth(self):
-        self.assertEqual(self.t_date.getMonth(), self.t_month)
+    def test_get_month(self):
+        self.assertEqual(self.t_date.get_month(), self.t_month)
 
-    def test_getDay(self):
-        self.assertEqual(self.t_date.getDay(), self.t_day)
+    def test_get_day(self):
+        self.assertEqual(self.t_date.get_day(), self.t_day)
 
     def test_compare(self):
         other = books_common.Date(self.t_year, self.t_month, self.t_day)
@@ -376,49 +376,49 @@ class TestPollMethods(unittest.TestCase):
         with self.assertRaises(TypeError):
             testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, None)
 
-    def test_getWinner(self):
+    def test_get_winner(self):
         self.t_poll.scores = [0, 0, 1]
-        self.assertTrue(self.t_book3.compare(self.t_poll.getWinner()))
+        self.assertTrue(self.t_book3.compare(self.t_poll.get_winner()))
         del self.t_poll.winner
 
         self.t_poll.scores = [0, 1, 1]
-        winner = self.t_poll.getWinner()
+        winner = self.t_poll.get_winner()
         self.assertTrue(self.t_book3.compare(winner) or self.t_book2.compare(winner))
         for i in range(10):
-            self.assertTrue(winner.compare(self.t_poll.getWinner()))
+            self.assertTrue(winner.compare(self.t_poll.get_winner()))
         del self.t_poll.winner
 
-    def test_closeVoting(self):
+    def test_close_voting(self):
         testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllSuccess())
-        self.assertTrue(testPoll.closeVoting())
+        self.assertTrue(testPoll.close_voting())
 
         testPoll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllFail())
-        self.assertFalse(testPoll.closeVoting())
+        self.assertFalse(testPoll.close_voting())
 
-    def test_getFormLink(self):
-        self.assertEqual(self.t_poll.getFormLink(), self.t_formLink)
+    def test_get_form_link(self):
+        self.assertEqual(self.t_poll.get_form_link(), self.t_formLink)
 
-    def test_getOptions(self):
-        options = self.t_poll.getOptions()
+    def test_get_options(self):
+        options = self.t_poll.get_options()
         for i in range(len(options)):
             self.assertTrue(options[i].compare(self.t_options[i]))
 
-    def test_getDate(self):
-        self.assertTrue(self.t_dateCreated.compare(self.t_poll.getDate()))
+    def test_get_date(self):
+        self.assertTrue(self.t_dateCreated.compare(self.t_poll.get_date()))
 
-    def test_updateResults(self):
+    def test_update_results(self):
         newScores = [100, 101, 102]
         bigPoll = books_common.Poll(self.t_options, newScores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
         testPoll = books_common.Poll(self.t_options, [1, 0, 0], self.t_formLink, self.t_formId, self.t_dateCreated, BaseDataIOReturnPoll(bigPoll))
 
         testPoll.winner = self.t_book1
-        testPoll.updateResults()
+        testPoll.update_results()
         self.assertFalse(hasattr(testPoll, 'winner'))
         for i in range(len(testPoll.scores)):
             self.assertEqual(newScores[i], testPoll.scores[i])
 
 class TestLocationMethods(unittest.TestCase):
-    def test_basic_init(self):
+    def test_init(self):
         with self.assertRaises(NotImplementedError):
             testVar = books_common.Location()
 
@@ -429,9 +429,6 @@ class TestLocationMethods(unittest.TestCase):
             testLoc1.compare(testLoc2)
 
 class TestDataIOMethods(unittest.TestCase):
-    def test_basic_init(self):
-        with self.assertRaises(NotImplementedError):
-            testVar = books_common.DataIO()
 
     def setUp(self):
         self.testIO = BaseDataIOWithoutErrorInit()
@@ -443,35 +440,39 @@ class TestDataIOMethods(unittest.TestCase):
         del self.testBook
         del self.testPoll
 
-    def test_getUserNames(self):
-        self.assertRaises(NotImplementedError, self.testIO.getUserNames)
+    def test_init(self):
+        with self.assertRaises(NotImplementedError):
+            testVar = books_common.DataIO()
 
-    def test_getUserInfo(self):
-        self.assertRaises(NotImplementedError, self.testIO.getUserInfo, "uName")
+    def test_get_user_names(self):
+        self.assertRaises(NotImplementedError, self.testIO.get_user_names)
 
-    def test_getUserBooks(self):
-        self.assertRaises(NotImplementedError, self.testIO.getUserBooks, "uName")
+    def test_get_user_info(self):
+        self.assertRaises(NotImplementedError, self.testIO.get_user_info, "uName")
 
-    def test_getHistory(self):
-        self.assertRaises(NotImplementedError, self.testIO.getHistory)
+    def test_get_user_books(self):
+        self.assertRaises(NotImplementedError, self.testIO.get_user_books, "uName")
 
-    def test_getCurrentPoll(self):
-        self.assertRaises(NotImplementedError, self.testIO.getCurrentPoll)
+    def test_get_history(self):
+        self.assertRaises(NotImplementedError, self.testIO.get_history)
 
-    def test_createUser(self):
-        self.assertRaises(NotImplementedError, self.testIO.createUser, "uName")
+    def test_get_current_poll(self):
+        self.assertRaises(NotImplementedError, self.testIO.get_current_poll)
 
-    def test_removeBook(self):
-        self.assertRaises(NotImplementedError, self.testIO.removeBook, self.testBook)
+    def test_create_user(self):
+        self.assertRaises(NotImplementedError, self.testIO.create_user, "uName")
 
-    def test_newPoll(self):
-        self.assertRaises(NotImplementedError, self.testIO.newPoll, self.testPoll)
+    def test_remove_book(self):
+        self.assertRaises(NotImplementedError, self.testIO.remove_book, self.testBook)
 
-    def test_closePoll(self):
-        self.assertRaises(NotImplementedError, self.testIO.closePoll, self.testPoll)
+    def test_new_poll(self):
+        self.assertRaises(NotImplementedError, self.testIO.new_poll, self.testPoll)
 
-    def test_addWinner(self):
-        self.assertRaises(NotImplementedError, self.testIO.addWinner, self.testBook)
+    def test_close_poll(self):
+        self.assertRaises(NotImplementedError, self.testIO.close_poll, self.testPoll)
+
+    def test_add_winner(self):
+        self.assertRaises(NotImplementedError, self.testIO.add_winner, self.testBook)
 
 if __name__ == '__main__':
     unittest.main()

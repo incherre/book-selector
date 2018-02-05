@@ -5,23 +5,23 @@ import random
 class Book:
     '''A class representing a book recommended by a user.'''
 
-    def __init__(self, title, authorFname, authorLname, location, data_io):
+    def __init__(self, title, author_first_name, author_last_name, location, data_io):
         if isinstance(title, str):
             self.title = title
         else:
             raise TypeError("Provided title not a string.")
 
-        if isinstance(authorFname, str):
-            self.authorFname = authorFname
+        if isinstance(author_first_name, str):
+            self.author_first_name = author_first_name
         else:
             raise TypeError("Provided author's first name not a string.")
 
-        if isinstance(authorLname, str):
-            self.authorLname = authorLname
+        if isinstance(author_last_name, str):
+            self.author_last_name = author_last_name
         else:
             raise TypeError("Provided author's last name not a string.")
 
-        if isinstance(location, Location) or location == None:
+        if isinstance(location, Location) or location is None:
             self.location = location
         else:
             raise TypeError("Provided location not a Location object.")
@@ -30,30 +30,29 @@ class Book:
             self.data_io = data_io
         else:
             raise TypeError("Provided data io interface not a DataIO object.")
-        
 
     def delete(self):
         '''Removes this book from the database. Returns success.'''
         if self.location != None:
-            return self.data_io.removeBook(self)
+            return self.data_io.remove_book(self)
         else:
             return False
 
-    def getTitle(self):
+    def get_title(self):
         '''Returns the title of this book.'''
         return self.title
 
-    def getAuthorName(self):
+    def get_author_name(self):
         '''Returns the author's name.'''
-        return self.authorFname + " " + self.authorLname
+        return self.author_first_name + " " + self.author_last_name
 
-    def getAuthorFName(self):
+    def get_author_first_name(self):
         '''Returns the author's first name.'''
-        return self.authorFname
+        return self.author_first_name
 
-    def getAuthorLName(self):
+    def get_author_last_name(self):
         '''Returns the author's last name.'''
-        return self.authorLname
+        return self.author_last_name
 
     def compare(self, other):
         '''Compares to another book. Books with the same title and author are considered equal.'''
@@ -61,60 +60,60 @@ class Book:
 
         #These next three lines rely on short circuit evalutation
         ret = ret and self.title.lower() == other.title.lower()
-        ret = ret and self.authorFname.lower() == other.authorFname.lower()
-        ret = ret and self.authorLname.lower() == other.authorLname.lower()
-        return ret 
+        ret = ret and self.author_first_name.lower() == other.author_first_name.lower()
+        ret = ret and self.author_last_name.lower() == other.author_last_name.lower()
+        return ret
 
 class User:
     '''A class representing a book club participant.'''
 
-    def __init__(self, userName, userEmail, books, formLink):
-        if isinstance(userName, str):
-            self.userName = userName
+    def __init__(self, user_name, user_email, books, form_link):
+        if isinstance(user_name, str):
+            self.user_name = user_name
         else:
             raise TypeError("Provided user name not a string.")
-        
-        if isinstance(userEmail, str):
-            self.userEmail = userEmail
+
+        if isinstance(user_email, str):
+            self.user_email = user_email
         else:
             raise TypeError("Provided user email not a string.")
 
-        if isinstance(books, list) and (len(books) == 0 or isinstance(books[0], Book)):
+        if isinstance(books, list) and (not books or isinstance(books[0], Book)):
             self.books = books
-            self.numBooks = len(books)
+            self.book_count = len(books)
         else:
             raise TypeError("Provided book list not a list of books.")
 
-        if isinstance(formLink, str):
-            self.formLink = formLink
+        if isinstance(form_link, str):
+            self.form_link = form_link
         else:
             raise TypeError("Provided link to form not a string.")
 
-    def getBooks(self):
+    def get_books(self):
         '''Returns the list of books suggested by this user.'''
         return self.books
 
-    def getUserName(self):
+    def get_user_name(self):
         '''Returns the user's username.'''
-        return self.userName
+        return self.user_name
 
-    def getUserEmail(self):
+    def get_user_email(self):
         '''Returns the user's email address.'''
-        return self.userEmail
+        return self.user_email
 
-    def getNumBooks(self):
+    def get_book_count(self):
         '''Returns the number of books a user has.'''
-        return self.numBooks
+        return self.book_count
 
-    def getFormLink(self):
+    def get_form_link(self):
         '''Returns the link to the form the user uses to input books.'''
-        return self.formLink
+        return self.form_link
 
-    def replaceBooks(self, newBooks):
+    def replace_books(self, new_books):
         '''Replaces the book list with the one provided.'''
-        if isinstance(newBooks, list) and (len(newBooks) == 0 or isinstance(newBooks[0], Book)):
-            self.books = newBooks
-            self.numBooks = len(newBooks)
+        if isinstance(new_books, list) and (not new_books or isinstance(new_books[0], Book)):
+            self.books = new_books
+            self.book_count = len(new_books)
         else:
             raise TypeError("Provided book list not a list of books.")
 
@@ -137,19 +136,19 @@ class Date:
         else:
             raise TypeError("Provided day not a valid number.")
 
-    def getStringDate(self):
+    def get_string_date(self):
         '''Returns a string representation of the date.'''
         return str(self.year) + "/" + str(self.month) + "/" + str(self.day)
 
-    def getYear(self):
+    def get_year(self):
         '''Returns the year.'''
         return self.year
 
-    def getMonth(self):
+    def get_month(self):
         '''Returns the month.'''
         return self.month
 
-    def getDay(self):
+    def get_day(self):
         '''Returns the day.'''
         return self.day
 
@@ -160,29 +159,29 @@ class Date:
 class Poll:
     '''A class representing a preferred book poll.'''
 
-    def __init__(self, options, scores, formLink, formId, dateCreated, data_io):
-        if isinstance(options, list) and (len(options) == 0 or isinstance(options[0], Book)):
+    def __init__(self, options, scores, form_link, form_id, date_created, data_io):
+        if isinstance(options, list) and (not options or isinstance(options[0], Book)):
             self.options = options
         else:
             raise TypeError("Provided options list not a list of books.")
 
-        if isinstance(scores, list) and len(scores) == len(options) and (len(scores) == 0 or isinstance(scores[0], int)):
+        if isinstance(scores, list) and len(scores) == len(options) and (not scores or isinstance(scores[0], int)):
             self.scores = scores
         else:
             raise TypeError("Provided scores list not a valid list of numbers.")
 
-        if isinstance(formLink, str):
-            self.formLink = formLink
+        if isinstance(form_link, str):
+            self.form_link = form_link
         else:
             raise TypeError("Provided link to form not a string.")
 
-        if isinstance(formId, str):
-            self.formId = formId
+        if isinstance(form_id, str):
+            self.form_id = form_id
         else:
             raise TypeError("Provided form identification not a string.")
 
-        if isinstance(dateCreated, Date):
-            self.dateCreated = dateCreated
+        if isinstance(date_created, Date):
+            self.date_created = date_created
         else:
             raise TypeError("Provided date not a date object.")
 
@@ -191,33 +190,33 @@ class Poll:
         else:
             raise TypeError("Provided data io interface not a DataIO object.")
 
-    def getWinner(self):
+    def get_winner(self):
         '''Returns the winner of the poll.'''
         if not hasattr(self, 'winner'):
             winning_threshold = max(self.scores)
             potential_winners = [i for i in range(len(self.scores)) if self.scores[i] == winning_threshold]
             self.winner = self.options[random.choice(potential_winners)] #deal with ties and make sure the result is consistent
-        return self.winner            
+        return self.winner
 
-    def closeVoting(self):
+    def close_voting(self):
         '''Closes the poll for voting. Returns success.'''
-        return self.data_io.closePoll(self)
+        return self.data_io.close_poll(self)
 
-    def getFormLink(self):
+    def get_form_link(self):
         '''Returns the link used to vote.'''
-        return self.formLink
+        return self.form_link
 
-    def getOptions(self):
+    def get_options(self):
         '''Returns the list of options used in the poll.'''
         return self.options
 
-    def getDate(self):
+    def get_date(self):
         '''Returns the date the poll was created.'''
-        return self.dateCreated
+        return self.date_created
 
-    def updateResults(self):
+    def update_results(self):
         '''Changes the results to those of the current poll. Removes the cached winner if it exists.'''
-        current_poll = self.data_io.getCurrentPoll()
+        current_poll = self.data_io.get_current_poll()
         self.scores = current_poll.scores
 
         if hasattr(self, 'winner'):
@@ -230,6 +229,7 @@ class Location:
         raise NotImplementedError('Abstract method "__init__" not implemented')
 
     def compare(self, other):
+        '''Abstract method. Returns whether two locations represent the same place or not.'''
         raise NotImplementedError('Abstract method "compare" not implemented')
 
 class DataIO:
@@ -238,32 +238,42 @@ class DataIO:
     def __init__(self):
         raise NotImplementedError('Abstract method "__init__" not implemented')
 
-    def getUserNames(self):
+    def get_user_names(self):
+        '''Abstract method. Returns a list of user names.'''
         raise NotImplementedError('Abstract method "getUserNames" not implemented')
 
-    def getUserInfo(self, user):
+    def get_user_info(self, user_name):
+        '''Abstract method. Returns a populated (except for the books) User object.'''
         raise NotImplementedError('Abstract method "getUserInfo" not implemented')
 
-    def getUserBooks(self, user):
+    def get_user_books(self, user):
+        '''Abstract method. Returns the list of books that belong to a user. Also updates the user object's books.'''
         raise NotImplementedError('Abstract method "getUserBooks" not implemented')
 
-    def getHistory(self):
+    def get_history(self):
+        '''Abstract method. Returns the list of books that have won in the past.'''
         raise NotImplementedError('Abstract method "getHistory" not implemented')
 
-    def getCurrentPoll(self):
+    def get_current_poll(self):
+        '''Abstract method. Returns the ongoing poll.'''
         raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
 
-    def createUser(self, user):
+    def create_user(self, user_name):
+        '''Abstract method. Creates a new user and returns it.'''
         raise NotImplementedError('Abstract method "createUser" not implemented')
 
-    def removeBook(self, book):
+    def remove_book(self, book):
+        '''Abstract method. Deletes a book, wherever it is stored.'''
         raise NotImplementedError('Abstract method "removeBook" not implemented')
 
-    def newPoll(self, poll):
+    def new_poll(self, poll):
+        '''Abstract method. Creates a new poll.'''
         raise NotImplementedError('Abstract method "newPoll" not implemented')
 
-    def closePoll(self, poll):
+    def close_poll(self, poll):
+        '''Abstract method. Stops a poll from accepting new responses.'''
         raise NotImplementedError('Abstract method "closePoll" not implemented')
 
-    def addWinner(self, book):
+    def add_winner(self, book):
+        '''Abstract method. Adds a book to the winner history.'''
         raise NotImplementedError('Abstract method "addWinner" not implemented')
