@@ -35,8 +35,8 @@ class Book:
         '''Removes this book from the database. Returns success.'''
         if self.location != None:
             return self.data_io.remove_book(self)
-        else:
-            return False
+
+        return False
 
     def get_title(self):
         '''Returns the title of this book.'''
@@ -154,18 +154,27 @@ class Date:
 
     def compare(self, other):
         '''Tests for equality between dates.'''
-        return isinstance(other, Date) and self.year == other.year and self.month == other.month and self.day == other.day
+        ret = isinstance(other, Date)
+        ret = ret and self.year == other.year
+        ret = ret and self.month == other.month
+        ret = ret and self.day == other.day
+        return ret
 
 class Poll:
     '''A class representing a preferred book poll.'''
 
     def __init__(self, options, scores, form_link, form_id, date_created, data_io):
+        self.winner = None
+
         if isinstance(options, list) and (not options or isinstance(options[0], Book)):
             self.options = options
         else:
             raise TypeError("Provided options list not a list of books.")
 
-        if isinstance(scores, list) and len(scores) == len(options) and (not scores or isinstance(scores[0], int)):
+        is_scores = isinstance(scores, list)
+        is_scores = is_scores and len(scores) == len(options)
+        is_scores = is_scores and (not scores or isinstance(scores[0], int))
+        if is_scores:
             self.scores = scores
         else:
             raise TypeError("Provided scores list not a valid list of numbers.")
@@ -192,10 +201,13 @@ class Poll:
 
     def get_winner(self):
         '''Returns the winner of the poll.'''
-        if not hasattr(self, 'winner'):
+        if self.winner is None:
             winning_threshold = max(self.scores)
-            potential_winners = [i for i in range(len(self.scores)) if self.scores[i] == winning_threshold]
-            self.winner = self.options[random.choice(potential_winners)] #deal with ties and make sure the result is consistent
+            potential_winners = [i for i in range(len(self.scores))
+                                 if self.scores[i] == winning_threshold]
+
+            #deal with ties and make sure the result is consistent
+            self.winner = self.options[random.choice(potential_winners)]
         return self.winner
 
     def close_voting(self):
@@ -215,7 +227,8 @@ class Poll:
         return self.date_created
 
     def update_results(self):
-        '''Changes the results to those of the current poll. Removes the cached winner if it exists.'''
+        '''Changes the results to those of the current poll.
+        Removes the cached winner if it exists.'''
         current_poll = self.data_io.get_current_poll()
         self.scores = current_poll.scores
 
@@ -247,7 +260,8 @@ class DataIO:
         raise NotImplementedError('Abstract method "getUserInfo" not implemented')
 
     def get_user_books(self, user):
-        '''Abstract method. Returns the list of books that belong to a user. Also updates the user object's books.'''
+        '''Abstract method. Returns the list of books that belong to a user.
+        Also updates the user object's books.'''
         raise NotImplementedError('Abstract method "getUserBooks" not implemented')
 
     def get_history(self):

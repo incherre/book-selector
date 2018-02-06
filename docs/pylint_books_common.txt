@@ -1,16 +1,8 @@
 ************* Module books_common
-C:157, 0: Line too long (122/100) (line-too-long)
-C:168, 0: Line too long (115/100) (line-too-long)
-C:197, 0: Line too long (107/100) (line-too-long)
-C:198, 0: Line too long (127/100) (line-too-long)
-C:218, 0: Line too long (103/100) (line-too-long)
-C:250, 0: Line too long (117/100) (line-too-long)
 R:  8, 4: Too many arguments (6/5) (too-many-arguments)
-R: 36, 8: Unnecessary "else" after "return" (no-else-return)
-R:162, 4: Too many arguments (7/5) (too-many-arguments)
-W:198,12: Attribute 'winner' defined outside __init__ (attribute-defined-outside-init)
-R:225, 0: Too few public methods (1/2) (too-few-public-methods)
+R:166, 4: Too many arguments (7/5) (too-many-arguments)
+R:238, 0: Too few public methods (1/2) (too-few-public-methods)
 
 ------------------------------------------------------------------
-Your code has been rated at 9.29/10 (previous run: 9.29/10, +3.84)
+Your code has been rated at 9.81/10 (previous run: 9.29/10, +0.52)
 

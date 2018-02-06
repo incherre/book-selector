@@ -379,7 +379,7 @@ class TestPollMethods(unittest.TestCase):
     def test_get_winner(self):
         self.t_poll.scores = [0, 0, 1]
         self.assertTrue(self.t_book3.compare(self.t_poll.get_winner()))
-        del self.t_poll.winner
+        self.t_poll.winner = None
 
         self.t_poll.scores = [0, 1, 1]
         winner = self.t_poll.get_winner()
