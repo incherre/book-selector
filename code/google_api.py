@@ -1,9 +1,8 @@
-import books_common
-
 import os
-import httplib2
 import time
 import string
+
+import httplib2
 
 from apiclient import discovery
 from apiclient import errors
@@ -12,6 +11,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from oauth2client import client
 from oauth2client.file import Storage
 from oauth2client import tools
+
+import books_common
 
 def get_credentials(credential_name, client_secret_file, scopes, application_name):
     '''Gets valid user credentials from storage.
@@ -55,24 +56,24 @@ def try_request_n_retries(request, times):
         else:
             return result
 
-def colNumber2colLetter(colNumber):
+def column_number_to_letter(column_number):
     '''Converts a column number to the column letters used by the Google apis.'''
 
-    colLetter = ''
-    unconverted_part = colNumber
+    column_letter = ''
+    unconverted_part = column_number
     while unconverted_part > 0:
         letter_index = (unconverted_part - 1) % 26
-        colLetter = string.ascii_uppercase[letter_index] + colLetter
+        column_letter = string.ascii_uppercase[letter_index] + column_letter
         unconverted_part = int((unconverted_part - letter_index - 1) / 26)
-    return colLetter
+    return column_letter
 
-def getA1Notation(sheetName, col1, row1, col2, row2):
+def get_a1_notation(sheet_name, col1, row1, col2, row2):
     '''Converts coordinates to the appropriate notation.'''
 
-    A1notation = "'" + sheetName + "'!"
-    A1notation += colNumber2colLetter(col1) + str(row1) + ':'
-    A1notation += colNumber2colLetter(col2) + str(row2)
-    return A1notation
+    a1_notation = "'" + sheet_name + "'!"
+    a1_notation += column_number_to_letter(col1) + str(row1) + ':'
+    a1_notation += column_number_to_letter(col2) + str(row2)
+    return a1_notation
 
 class AppsScriptError(Exception):
     pass
@@ -83,32 +84,32 @@ class SpreadsheetFormatError(Exception):
 class FormLocation(books_common.Location):
     '''A class representing where a book is stored when used with GoogleDocsBot.'''
 
-    def __init__(self, formId, responseId):
-        if isinstance(formId, str):
-            self.formId = formId
+    def __init__(self, form_id, response_id):
+        if isinstance(form_id, str):
+            self.form_id = form_id
         else:
             raise TypeError("Provided form ID not a string.")
 
-        if isinstance(responseId, str):
-            self.responseId = responseId
+        if isinstance(response_id, str):
+            self.response_id = response_id
         else:
             raise TypeError("Provided response ID not a string.")
 
-    def getFormId(self):
+    def get_form_id(self):
         '''Returns the form id.'''
 
-        return self.formId
+        return self.form_id
 
-    def getResponseId(self):
+    def get_response_id(self):
         '''Returns the response id.'''
 
-        return self.responseId
+        return self.response_id
 
     def compare(self, other):
         same = True
         same = same and isinstance(other, FormLocation)
-        same = same and self.formId == other.formId
-        same = same and self.responseId == other.responseId
+        same = same and self.form_id == other.form_id
+        same = same and self.response_id == other.response_id
         return same
 
 class GoogleDocsBot(books_common.DataIO):
@@ -121,14 +122,14 @@ class GoogleDocsBot(books_common.DataIO):
                         'https://www.googleapis.com/auth/forms',
                         'https://www.googleapis.com/auth/userinfo.email']
 
-    infoSpreadNames = ('BookClubInfo', 'Users', 'History', 'GlobalInfo')
-    userSheetWidth = 4
-    historySheetWidth = 4
-    pollIdPos = (1, 1)
-    locationWidth = 3
+    info_spread_names = ('BookClubInfo', 'Users', 'History', 'GlobalInfo')
+    user_sheet_width = 4
+    history_sheet_width = 4
+    poll_id_position = (1, 1)
+    location_width = 3
 
-    retryReq = 5
-    fetchNum = 10
+    max_retries = 5
+    fetch_number = 10
 
     def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
         if isinstance(app_name, str):
@@ -163,7 +164,7 @@ class GoogleDocsBot(books_common.DataIO):
             # get the user's email for transferring ownership
             email_function = {"function": "getEmail", "parameters": []}
             email_request = self.appsscript_service.scripts().run(body=email_function, scriptId=self.script_id)
-            email_response = try_request_n_retries(email_request, self.retryReq)
+            email_response = try_request_n_retries(email_request, self.max_retries)
             self.admin_email = email_response['response'].get('result', str)
 
             if self.admin_email == '':
@@ -173,82 +174,82 @@ class GoogleDocsBot(books_common.DataIO):
             print('File: "' + str(client_secret_path) + '" was not found.')
             raise
 
-    def getFileList(self):
+    def get_file_list(self):
         '''Returns a list of files accessible by the service account.'''
 
         files_request = self.drive_service.files().list(fields="nextPageToken, files(id, name)")
-        files_results = try_request_n_retries(files_request, self.retryReq)
+        files_results = try_request_n_retries(files_request, self.max_retries)
         files = files_results.get('files', [])
-        nextPageToken = files_results.get('nextPageToken')
+        next_page_token = files_results.get('nextPageToken')
 
-        while nextPageToken and nextPageToken != '':
+        while next_page_token and next_page_token != '':
             #make sure to get the full list if required
-            files_request = drive_service.files().list(pageToken=nextPageToken,
+            files_request = drive_service.files().list(pageToken=next_page_token,
                                                        fields="nextPageToken, files(id, name)")
-            files_results = try_request_n_retries(files_request, self.retryReq)
+            files_results = try_request_n_retries(files_request, self.max_retries)
             files += files_results.get('files', [])
-            nextPageToken = files_results.get('nextPageToken')
+            next_page_token = files_results.get('nextPageToken')
 
         return files
 
-    def getBookClubInfoSheetID(self):
+    def get_book_club_info_sheet_id(self):
         '''Returns the file id of the sheet used to store book club information.'''
 
-        if not hasattr(self, 'bookClubInfoSheetID'):
-            files = self.getFileList()
-            self.bookClubInfoSheetID = None
+        if not hasattr(self, 'book_club_info_sheet_id'):
+            files = self.get_file_list()
+            self.book_club_info_sheet_id = None
             if files:
                 for item in files:
-                    if item['name'] == self.infoSpreadNames[0]:
-                        self.bookClubInfoSheetID = item['id']
+                    if item['name'] == self.info_spread_names[0]:
+                        self.book_club_info_sheet_id = item['id']
 
-            if not self.bookClubInfoSheetID:
-                del self.bookClubInfoSheetID
+            if not self.book_club_info_sheet_id:
+                del self.book_club_info_sheet_id
                 raise SpreadsheetFormatError('No User spreadsheet found.')
 
-        return self.bookClubInfoSheetID
+        return self.book_club_info_sheet_id
 
-    def getUserTable(self):
+    def get_user_table(self):
         '''Returns a matrix of user records.'''
 
-        if not hasattr(self, 'userTable'):
-            userSheetId = self.getBookClubInfoSheetID()
+        if not hasattr(self, 'user_table'):
+            user_sheet_id = self.get_book_club_info_sheet_id()
 
-            rangeStart = 1
-            userInfo = {}
+            range_start = 1
+            user_info = {}
 
-            rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + self.fetchNum - 1))
-            request = self.sheets_service.spreadsheets().values().get(
-                majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-            result = try_request_n_retries(request, self.retryReq)
-            values = result.get('values', [])
+            range_string = get_a1_notation(self.info_spread_names[1], 1, range_start, self.user_sheet_width, (range_start + self.fetch_number - 1))
+            users_request = self.sheets_service.spreadsheets().values().get(
+                majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+            users_result = try_request_n_retries(users_request, self.max_retries)
+            values = users_result.get('values', [])
 
             while values != []:
                 for user in values:
                     if user != []:
-                        userInfo[user[0]] = user
+                        user_info[user[0]] = user
 
-                rangeStart += self.fetchNum
-                rangeStr = getA1Notation(self.infoSpreadNames[1], 1, rangeStart, self.userSheetWidth, (rangeStart + self.fetchNum - 1))
+                range_start += self.fetch_number
+                range_string = get_a1_notation(self.info_spread_names[1], 1, range_start, self.user_sheet_width, (range_start + self.fetch_number - 1))
 
-                request = self.sheets_service.spreadsheets().values().get(
-                    majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-                result = try_request_n_retries(request, self.retryReq)
-                values = result.get('values', [])
+                users_request = self.sheets_service.spreadsheets().values().get(
+                    majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+                users_result = try_request_n_retries(users_request, self.max_retries)
+                values = users_result.get('values', [])
 
-            self.userTable = userInfo
+            self.user_table = user_info
 
-        return self.userTable
+        return self.user_table
 
-    def makeNewBookClub(self, shouldPrint=True):
+    def make_new_book_club(self, should_print=True):
         '''Creates the document structure for a new book club. Returns success.'''
 
         #start checking for old book club code
-        files = self.getFileList()
+        files = self.get_file_list()
         if files:
             for item in files:
-                if item['name'] == self.infoSpreadNames[0]:
-                    if shouldPrint:
+                if item['name'] == self.info_spread_names[0]:
+                    if should_print:
                         print('Book Club already exists under this bot.')
                     return False #Can't make a new book club when there is already one
         #end checking for old book club code
@@ -256,25 +257,28 @@ class GoogleDocsBot(books_common.DataIO):
         #start creating new book club code
         spreadsheet_body = {
             "properties": {
-                "title": self.infoSpreadNames[0]
+                "title": self.info_spread_names[0]
             },
-            "sheets": [{
-                "properties": {
-                    "title": self.infoSpreadNames[1],
-                    "index": 0
-                }},
+            "sheets": [
                 {
-                "properties": {
-                    "title": self.infoSpreadNames[2],
-                    "index": 1
-                }}
+                    "properties": {
+                        "title": self.info_spread_names[1],
+                        "index": 0
+                    }
+                },
+                {
+                    "properties": {
+                        "title": self.info_spread_names[2],
+                        "index": 1
+                    }
+                }
             ]
         }
         new_sheet_request = self.sheets_service.spreadsheets().create(body=spreadsheet_body)
         try:
-            new_sheet_response = try_request_n_retries(new_sheet_request, self.retryReq) #make the new spreadsheet
+            new_sheet_response = try_request_n_retries(new_sheet_request, self.max_retries) #make the new spreadsheet
         except errors.HttpError:
-            if shouldPrint:
+            if should_print:
                 print('Failed to create the new User spreadsheet')
             return False
         new_sheet_file_id = new_sheet_response['spreadsheetId']
@@ -287,268 +291,268 @@ class GoogleDocsBot(books_common.DataIO):
             'emailAddress': self.admin_email
         }
         share_request = self.drive_service.permissions().create(
-                fileId=new_sheet_file_id,
-                body=user_permission,
-                fields='id',
-                transferOwnership=True) #only required for 'owner' permission
+            fileId=new_sheet_file_id,
+            body=user_permission,
+            fields='id',
+            transferOwnership=True) #only required for 'owner' permission
 
-        share_response = try_request_n_retries(share_request, self.retryReq) #share the new spreadsheet
+        share_response = try_request_n_retries(share_request, self.max_retries) #share the new spreadsheet
         #end sharing code
 
         return True
 
-    def getUserNames(self):
+    def get_user_names(self):
         '''Returns a list of usernames.'''
 
-        userTable = self.getUserTable()
+        user_table = self.get_user_table()
 
-        userNames = list(userTable.keys())
+        user_names = list(user_table.keys())
 
-        return userNames
+        return user_names
 
-    def getUserInfo(self, userName):
+    def get_user_info(self, username):
         '''Returns a user's information.'''
 
-        userInfo = []
-        userTable = self.getUserTable()
+        user_info = []
+        user_table = self.get_user_table()
 
-        if userName in userTable:
-            userInfo = userTable[userName]
+        if username in user_table:
+            user_info = user_table[username]
 
-        if len(userInfo) >= self.userSheetWidth:
-            return books_common.User(userInfo[0], userInfo[1], [], userInfo[2])
-        else:
-            return userInfo
+        if len(user_info) >= self.user_sheet_width:
+            return books_common.User(user_info[0], user_info[1], [], user_info[2])
 
-    def getUserBooks(self, user):
+        return user_info
+
+    def get_user_books(self, user):
         '''Returns the list of books entered by the user and updates the user object's book list.'''
 
-        userName = user.getUserName()
-        userFormID = None
-        userTable = self.getUserTable()
+        username = user.get_user_name()
+        get_form_id = None
+        user_table = self.get_user_table()
 
-        if userName in userTable:
-            userFormID = userTable[userName][3]
+        if username in user_table:
+            get_form_id = user_table[username][3]
         else:
             raise SpreadsheetFormatError('Requested User does not exist.')
 
-        getbooks_function = {"function": "getBookList", "parameters": [userFormID]}
-        getbooks_request = self.appsscript_service.scripts().run(body=getbooks_function,scriptId=self.script_id)
-        getbooks_response = try_request_n_retries(getbooks_request, self.retryReq)
+        getbooks_function = {"function": "getBookList", "parameters": [get_form_id]}
+        getbooks_request = self.appsscript_service.scripts().run(body=getbooks_function, scriptId=self.script_id)
+        getbooks_response = try_request_n_retries(getbooks_request, self.max_retries)
 
         rawbooks_list = getbooks_response['response'].get('result', [])
         books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
-                                        FormLocation(userFormID, i['formResponseId']), self)
+                                        FormLocation(get_form_id, i['formResponseId']), self)
                       for i in rawbooks_list]
 
-        user.replaceBooks(books_list)
+        user.replace_books(books_list)
 
         return books_list
 
-    def getHistory(self):
+    def get_history(self):
         '''Gets a list of books that have previously won a contest.'''
 
         if not hasattr(self, 'history'):
-            userSheetId = self.getBookClubInfoSheetID()
+            user_sheet_id = self.get_book_club_info_sheet_id()
 
-            rangeStart = 1
+            range_start = 1
             history = []
 
-            rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + self.fetchNum - 1))
-            request = self.sheets_service.spreadsheets().values().get(
-                majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-            result = try_request_n_retries(request, self.retryReq)
-            values = result.get('values', [])
+            range_string = get_a1_notation(self.info_spread_names[2], 1, range_start, self.history_sheet_width, (range_start + self.fetch_number - 1))
+            history_request = self.sheets_service.spreadsheets().values().get(
+                majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+            history_result = try_request_n_retries(history_request, self.max_retries)
+            values = history_result.get('values', [])
 
             while values != []:
                 for book in values:
                     if book != []:
                         history.append(book)
 
-                rangeStart += self.fetchNum
-                rangeStr = getA1Notation(self.infoSpreadNames[2], 1, rangeStart, self.historySheetWidth, (rangeStart + self.fetchNum - 1))
+                range_start += self.fetch_number
+                range_string = get_a1_notation(self.info_spread_names[2], 1, range_start, self.history_sheet_width, (range_start + self.fetch_number - 1))
 
-                request = self.sheets_service.spreadsheets().values().get(
-                    majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-                result = try_request_n_retries(request, self.retryReq)
-                values = result.get('values', [])
+                history_request = self.sheets_service.spreadsheets().values().get(
+                    majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+                history_result = try_request_n_retries(history_request, self.max_retries)
+                values = history_result.get('values', [])
 
             self.history = history
 
         return self.history
 
-    def createUser(self, userName, userEmail, shouldPrint=True):
+    def create_user(self, username, user_email, should_print=True):
         '''Creates all the data entries for a new user.'''
 
-        existingUserNames = self.getUserNames()
+        existing_user_names = self.get_user_names()
 
-        if userName in existingUserNames:
-            if shouldPrint:
+        if username in existing_user_names:
+            if should_print:
                 print('User already exists.')
             return False
 
-        userform_function = {"function": "makeBooksForm", "parameters": [self.service_email, userName]}
-        userform_request = self.appsscript_service.scripts().run(body=userform_function,scriptId=self.script_id)
-        userform_response = try_request_n_retries(userform_request, self.retryReq)
+        userform_function = {"function": "makeBooksForm", "parameters": [self.service_email, username]}
+        userform_request = self.appsscript_service.scripts().run(body=userform_function, scriptId=self.script_id)
+        userform_response = try_request_n_retries(userform_request, self.max_retries)
 
         userform_dict = userform_response['response'].get('result', {})
         userform_link = userform_dict['form_url']
         userform_id = userform_dict['form_id']
 
-        user_record = [userName, userEmail, userform_link, userform_id]
+        user_record = [username, user_email, userform_link, userform_id]
 
-        newRecordNumber = len(existingUserNames) + 1
-        rangeStr = getA1Notation(self.infoSpreadNames[1], 1, newRecordNumber, self.userSheetWidth, newRecordNumber)
-        sheetId = self.getBookClubInfoSheetID()
+        new_record_number = len(existing_user_names) + 1
+        range_string = get_a1_notation(self.info_spread_names[1], 1, new_record_number, self.user_sheet_width, new_record_number)
+        user_sheet_id = self.get_book_club_info_sheet_id()
         update_body = {
-            "range": rangeStr,
+            "range": range_string,
             "majorDimension": "ROWS",
             "values": [user_record],
         }
         update_request = self.sheets_service.spreadsheets().values().update(
-            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
+            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
 
-        update_response = try_request_n_retries(update_request, self.retryReq)
+        update_response = try_request_n_retries(update_request, self.max_retries)
 
-        self.userTable[userName] = user_record
+        self.user_table[username] = user_record
 
-        return books_common.User(userName, userEmail, [], userform_link)
+        return books_common.User(username, user_email, [], userform_link)
 
-    def removeBook(self, book):
+    def remove_book(self, book):
         '''Deletes a book from a user's remote list.'''
 
         loc = book.location
         if not isinstance(loc, FormLocation):
             raise TypeError('Provided book has an incompatible location type.')
 
-        formId = loc.formId
-        responseId = loc.responseId
+        form_id = loc.get_form_id()
+        response_id = loc.get_response_id()
 
-        delbook_function = {"function": "delResponse", "parameters": [formId, responseId]}
-        delbook_request = self.appsscript_service.scripts().run(body=delbook_function,scriptId=self.script_id)
-        delbook_response = try_request_n_retries(delbook_request, self.retryReq)
+        delbook_function = {"function": "delResponse", "parameters": [form_id, response_id]}
+        delbook_request = self.appsscript_service.scripts().run(body=delbook_function, scriptId=self.script_id)
+        delbook_response = try_request_n_retries(delbook_request, self.max_retries)
 
         return True
 
-    def addWinner(self, book):
+    def add_winner(self, book):
         '''Adds a winner to the history file.'''
 
-        history = self.getHistory()
+        history = self.get_history()
         date = time.strftime('%Y/%m/%d')
 
-        winner_record = [date, book.getTitle(), book.getAuthorFName(), book.getAuthorLName()]
+        winner_record = [date, book.get_title(), book.get_author_first_name(), book.get_author_last_name()]
 
-        newRecordNumber = len(history) + 1
-        rangeStr = getA1Notation(self.infoSpreadNames[2], 1, newRecordNumber, self.historySheetWidth, newRecordNumber)
-        sheetId = self.getBookClubInfoSheetID()
+        new_record_number = len(history) + 1
+        range_string = get_a1_notation(self.info_spread_names[2], 1, new_record_number, self.history_sheet_width, new_record_number)
+        user_sheet_id = self.get_book_club_info_sheet_id()
         update_body = {
-            "range": rangeStr,
+            "range": range_string,
             "majorDimension": "ROWS",
             "values": [winner_record],
         }
         update_request = self.sheets_service.spreadsheets().values().update(
-            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
+            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
 
-        update_response = try_request_n_retries(update_request, self.retryReq)
+        update_response = try_request_n_retries(update_request, self.max_retries)
 
         self.history.append(winner_record)
 
-    def getCurrentPoll(self):
+    def get_current_poll(self):
         '''Returns the currently ongoing book poll.'''
 
-        userSheetId = self.getBookClubInfoSheetID()
+        user_sheet_id = self.get_book_club_info_sheet_id()
 
-        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.pollIdPos[0], self.pollIdPos[1])
+        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1], self.poll_id_position[0], self.poll_id_position[1])
         request = self.sheets_service.spreadsheets().values().get(
-            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-        result = try_request_n_retries(request, self.retryReq)
+            majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+        result = try_request_n_retries(request, self.max_retries)
         values = result.get('values', [])
 
-        currentPollId = ''
+        current_poll_id = ''
         if values and values[0] and values[0][0]:
-            currentPollId = values[0][0]
+            current_poll_id = values[0][0]
 
-        if currentPollId == '':
+        if current_poll_id == '':
             return None
 
-        getpoll_function = {"function": "getPollInfo", "parameters": [currentPollId]}
-        getpoll_request = self.appsscript_service.scripts().run(body=getpoll_function,scriptId=self.script_id)
-        getpoll_response = try_request_n_retries(getpoll_request, self.retryReq)
+        getpoll_function = {"function": "getPollInfo", "parameters": [current_poll_id]}
+        getpoll_request = self.appsscript_service.scripts().run(body=getpoll_function, scriptId=self.script_id)
+        getpoll_response = try_request_n_retries(getpoll_request, self.max_retries)
 
-        pollDict = getpoll_response['response'].get('result', {})
+        poll_dict = getpoll_response['response'].get('result', {})
 
-        numOptions = len(pollDict['options'])
-        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1] + 1, self.locationWidth, numOptions + 1)
-        request = self.sheets_service.spreadsheets().values().get(
-            majorDimension='ROWS', spreadsheetId=userSheetId, range=rangeStr)
-        result = try_request_n_retries(request, self.retryReq)
-        values = result.get('values', [])
+        option_count = len(poll_dict['options'])
+        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1] + 1, self.location_width, option_count + 1)
+        location_request = self.sheets_service.spreadsheets().values().get(
+            majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+        location_result = try_request_n_retries(location_request, self.max_retries)
+        values = location_result.get('values', [])
 
-        locDict = {}
+        location_dict = {}
         for row in values:
-            locDict[row[0]] = FormLocation(row[1], row[2])
+            location_dict[row[0]] = FormLocation(row[1], row[2])
 
         options = []
         scores = []
-        for i in range(len(pollDict['options'])):
-            idString = pollDict['options'][i]
-            title, author = idString.split(': ', maxsplit=1)
+        for i in range(option_count):
+            id_string = poll_dict['options'][i]
+            title, author = id_string.split(': ', maxsplit=1)
             last, first = author.split(', ', maxsplit=1)
 
-            options.append(books_common.Book(title, first, last, locDict[idString], self))
-            scores.append(int(pollDict['scores'][i]))
+            options.append(books_common.Book(title, first, last, location_dict[id_string], self))
+            scores.append(int(poll_dict['scores'][i]))
 
-        formLink = pollDict['url']
+        form_link = poll_dict['url']
 
-        dateCreated = books_common.Date(int(pollDict['date']['year']),
-                                        int(pollDict['date']['month']),
-                                        int(pollDict['date']['day']))
+        date_created = books_common.Date(int(poll_dict['date']['year']),
+                                         int(poll_dict['date']['month']),
+                                         int(poll_dict['date']['day']))
 
-        return books_common.Poll(options, scores, formLink, currentPollId, dateCreated, self)
+        return books_common.Poll(options, scores, form_link, current_poll_id, date_created, self)
 
-    def newPoll(self, options):
-        '''Replaces the old poll with the provided poll. closePoll should often be called on the old poll first.'''
+    def new_poll(self, options):
+        '''Replaces the old poll with the provided poll. close_poll should often be called on the old poll first.'''
 
-        stringOptions = []
-        locationData = []
+        string_options = []
+        location_data = []
         for i in options:
-            identifier = i.getTitle() + ': ' + i.getAuthorLName() + ', ' + i.getAuthorFName()
-            stringOptions.append(identifier)
+            identifier = i.get_title() + ': ' + i.get_author_last_name() + ', ' + i.get_author_first_name()
+            string_options.append(identifier)
 
             loc = i.location
-            locationData.append([identifier, loc.formId, loc.responseId])
+            location_data.append([identifier, loc.get_form_id(), loc.get_response_id()])
 
-        makepoll_function = {"function": "makePollForm", "parameters": [self.service_email, stringOptions]}
-        makepoll_request = self.appsscript_service.scripts().run(body=makepoll_function,scriptId=self.script_id)
-        makepoll_response = try_request_n_retries(makepoll_request, self.retryReq)
+        makepoll_function = {"function": "makePollForm", "parameters": [self.service_email, string_options]}
+        makepoll_request = self.appsscript_service.scripts().run(body=makepoll_function, scriptId=self.script_id)
+        makepoll_response = try_request_n_retries(makepoll_request, self.max_retries)
 
         pollform_dict = makepoll_response['response'].get('result', {})
         pollform_link = pollform_dict['form_url']
         pollform_id = pollform_dict['form_id']
 
-        rangeStr = getA1Notation(self.infoSpreadNames[3], self.pollIdPos[0], self.pollIdPos[1], self.locationWidth, len(locationData) + 1)
-        sheetId = self.getBookClubInfoSheetID()
+        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1], self.location_width, len(location_data) + 1)
+        user_sheet_id = self.get_book_club_info_sheet_id()
         update_body = {
-            "range": rangeStr,
+            "range": range_string,
             "majorDimension": "ROWS",
-            "values": [[pollform_id]] + locationData,
+            "values": [[pollform_id]] + location_data,
         }
         update_request = self.sheets_service.spreadsheets().values().update(
-            spreadsheetId=sheetId, range=rangeStr, valueInputOption='RAW', body=update_body)
-        update_response = try_request_n_retries(update_request, self.retryReq)
+            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
+        update_response = try_request_n_retries(update_request, self.max_retries)
 
         scores = [0] * len(options)
 
         now = time.localtime()
-        dateCreated = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
+        date_created = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
 
-        return books_common.Poll(options, scores, pollform_link, pollform_id, dateCreated, self)
+        return books_common.Poll(options, scores, pollform_link, pollform_id, date_created, self)
 
-    def closePoll(self, poll):
+    def close_poll(self, poll):
         '''Stops the poll from accepting responses.'''
 
-        pollId = poll.formId
+        poll_id = poll.form_id
 
-        closepoll_function = {"function": "closeForm", "parameters": [pollId]}
-        closepoll_request = self.appsscript_service.scripts().run(body=closepoll_function,scriptId=self.script_id)
-        closepoll_response = try_request_n_retries(closepoll_request, self.retryReq)
+        closepoll_function = {"function": "closeForm", "parameters": [poll_id]}
+        closepoll_request = self.appsscript_service.scripts().run(body=closepoll_function, scriptId=self.script_id)
+        closepoll_response = try_request_n_retries(closepoll_request, self.max_retries)
