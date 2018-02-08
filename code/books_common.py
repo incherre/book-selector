@@ -1,6 +1,7 @@
 '''This file contains the shared classes used by the book-selector project.'''
 
 import random
+from abc import ABC, abstractmethod
 
 class Book:
     '''A class representing a book recommended by a user.'''
@@ -235,59 +236,72 @@ class Poll:
         if hasattr(self, 'winner'):
             del self.winner
 
-class Location:
+class Location(ABC):
     '''An abstract class representing where a book is stored'''
 
+    @abstractmethod
     def __init__(self):
-        raise NotImplementedError('Abstract method "__init__" not implemented')
+        pass
 
+    @abstractmethod
     def compare(self, other):
         '''Abstract method. Returns whether two locations represent the same place or not.'''
         raise NotImplementedError('Abstract method "compare" not implemented')
 
-class DataIO:
+class DataIO(ABC):
     '''An abstract class representing the functions to communicate with a DB.'''
 
+    @abstractmethod
     def __init__(self):
-        raise NotImplementedError('Abstract method "__init__" not implemented')
+        pass
 
+    @abstractmethod
     def get_user_names(self):
         '''Abstract method. Returns a list of user names.'''
         raise NotImplementedError('Abstract method "getUserNames" not implemented')
 
-    def get_user_info(self, user_name):
+    @abstractmethod
+    def get_user_info(self, username):
         '''Abstract method. Returns a populated (except for the books) User object.'''
         raise NotImplementedError('Abstract method "getUserInfo" not implemented')
 
+    @abstractmethod
     def get_user_books(self, user):
         '''Abstract method. Returns the list of books that belong to a user.
         Also updates the user object's books.'''
         raise NotImplementedError('Abstract method "getUserBooks" not implemented')
 
+    @abstractmethod
     def get_history(self):
         '''Abstract method. Returns the list of books that have won in the past.'''
         raise NotImplementedError('Abstract method "getHistory" not implemented')
 
+    @abstractmethod
     def get_current_poll(self):
         '''Abstract method. Returns the ongoing poll.'''
         raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
 
-    def create_user(self, user_name):
+    @abstractmethod
+    def create_user(self, username, user_email):
         '''Abstract method. Creates a new user and returns it.'''
         raise NotImplementedError('Abstract method "createUser" not implemented')
 
+    @abstractmethod
     def remove_book(self, book):
         '''Abstract method. Deletes a book, wherever it is stored.'''
         raise NotImplementedError('Abstract method "removeBook" not implemented')
 
-    def new_poll(self, poll):
+    @abstractmethod
+    def new_poll(self, options):
         '''Abstract method. Creates a new poll.'''
         raise NotImplementedError('Abstract method "newPoll" not implemented')
 
+    @abstractmethod
     def close_poll(self, poll):
         '''Abstract method. Stops a poll from accepting new responses.'''
         raise NotImplementedError('Abstract method "closePoll" not implemented')
 
+    @abstractmethod
     def add_winner(self, book):
         '''Abstract method. Adds a book to the winner history.'''
         raise NotImplementedError('Abstract method "addWinner" not implemented')

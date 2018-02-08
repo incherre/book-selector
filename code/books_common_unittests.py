@@ -8,9 +8,42 @@ class BaseLocationWithoutErrorInit(books_common.Location):
     def __init__(self):
         pass
 
+    def compare(self, other):
+        return super().compare(other)
+
 class BaseDataIOWithoutErrorInit(books_common.DataIO):
     def __init__(self):
         pass
+
+    def add_winner(self, book):
+        return super().add_winner(book)
+
+    def close_poll(self, poll):
+        return super().close_poll(poll)
+
+    def create_user(self, username, user_email):
+        return super().create_user(username, user_email)
+
+    def get_current_poll(self):
+        return super().get_current_poll()
+
+    def get_history(self):
+        return super().get_history()
+
+    def get_user_books(self, user):
+        return super().get_user_books(user)
+
+    def get_user_info(self, username):
+        return super().get_user_info(username)
+
+    def get_user_names(self):
+        return super().get_user_names()
+
+    def new_poll(self, options):
+        return super().new_poll(options)
+
+    def remove_book(self, book):
+        return super().remove_book(book)
 
 class LocationAllTrue(books_common.Location):
     def __init__(self):
@@ -26,11 +59,9 @@ class LocationAllFalse(books_common.Location):
     def compare(self, other):
         return False
 
-class DataIOAllSuccess(books_common.DataIO):
+class DataIOAllSuccess(BaseDataIOWithoutErrorInit):
     '''Anything that returns a success returns true'''
-    def __init__(self):
-        pass
-
+    
     def create_user(self, user):
         return True
 
@@ -46,10 +77,8 @@ class DataIOAllSuccess(books_common.DataIO):
     def add_winner(self, book):
         return True
 
-class DataIOAllFail(books_common.DataIO):
+class DataIOAllFail(BaseDataIOWithoutErrorInit):
     '''Anything that returns a success returns false'''
-    def __init__(self):
-        pass
 
     def create_user(self, user):
         return False
@@ -66,7 +95,7 @@ class DataIOAllFail(books_common.DataIO):
     def add_winner(self, book):
         return False
 
-class BaseDataIOReturnPoll(books_common.DataIO):
+class BaseDataIOReturnPoll(BaseDataIOWithoutErrorInit):
     def __init__(self, poll):
         self.poll = poll
 
@@ -419,7 +448,7 @@ class TestPollMethods(unittest.TestCase):
 
 class TestLocationMethods(unittest.TestCase):
     def test_init(self):
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(TypeError):
             testVar = books_common.Location()
 
     def test_compare(self):
@@ -441,7 +470,7 @@ class TestDataIOMethods(unittest.TestCase):
         del self.testPoll
 
     def test_init(self):
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(TypeError):
             testVar = books_common.DataIO()
 
     def test_get_user_names(self):
@@ -460,7 +489,7 @@ class TestDataIOMethods(unittest.TestCase):
         self.assertRaises(NotImplementedError, self.testIO.get_current_poll)
 
     def test_create_user(self):
-        self.assertRaises(NotImplementedError, self.testIO.create_user, "uName")
+        self.assertRaises(NotImplementedError, self.testIO.create_user, "uName", "user@email.com")
 
     def test_remove_book(self):
         self.assertRaises(NotImplementedError, self.testIO.remove_book, self.testBook)
