@@ -42,7 +42,7 @@ def get_credentials(credential_name, client_secret_file, scopes, application_nam
 def try_request_n_retries(request, times):
     '''Tries a request up to some number of times. Only retries on failure.'''
 
-    for i in range(times):
+    for i in range(1, times + 1):
         try:
             result = request.execute()
 
@@ -50,8 +50,8 @@ def try_request_n_retries(request, times):
                 error = result['error']['details'][0]
                 raise AppsScriptError(error)
 
-        except errors.HttpError:
-            if i == times - 1:
+        except (errors.HttpError, AppsScriptError):
+            if i == times: #It's the last possible try
                 raise
             else:
                 time.sleep(1)
@@ -86,12 +86,25 @@ class SpreadsheetFormatError(Exception):
     pass
 
 class Services():
-    '''A class to hold the credentials used by the bot.'''
+    '''A class to hold the authorized services used by the bot.'''
 
     def __init__(self, drive_service, sheets_service, appsscript_service):
-        self.drive = drive_service
-        self.sheets = sheets_service
-        self.appsscript = appsscript_service
+        self._drive = drive_service
+        self._sheets = sheets_service
+        self._appsscript = appsscript_service
+
+    def drive(self):
+        '''Returns the drive service.'''
+        return self._drive
+
+    def sheets(self):
+        '''Returns the sheets service.'''
+        return self._sheets
+
+    def appsscript(self):
+        '''Returns the appsscript service.'''
+        return self._appsscript
+
 
 class Cache():
     '''A class to hold information that might be needed many times.'''
@@ -176,19 +189,15 @@ class GoogleDocsBot(books_common.DataIO):
     user_table = 'user_table'
     history = 'history'
 
+    app_name = 'Book Club'
     should_print = True
     max_retries = 5
     fetch_number = 10
 
-    def __init__(self, credential_path, client_secret_path, app_name, credential_name, script_id):
+    def __init__(self, credential_path, client_secret_path, credential_name, script_id):
         super().__init__()
 
         self.cache = Cache()
-
-        if isinstance(app_name, str):
-            self.app_name = app_name
-        else:
-            raise TypeError("Provided application name not a string.")
 
         if isinstance(script_id, str):
             self.script_id = script_id
@@ -197,9 +206,10 @@ class GoogleDocsBot(books_common.DataIO):
 
         try:
             # create service account api services
-            service_creds = ServiceAccountCredentials.from_json_keyfile_name(credential_path, self.service_scope)
-            drive_http = service_creds.authorize(httplib2.Http())
-            drive_service = discovery.build('drive', 'v3', http=drive_http)
+            service_creds = ServiceAccountCredentials.from_json_keyfile_name(
+                credential_path, self.service_scope)
+            drive_service = discovery.build('drive', 'v3',
+                                            http=service_creds.authorize(httplib2.Http()))
             sheets_service = discovery.build('sheets', 'v4', credentials=service_creds)
 
             # get the service account's email for sharing
@@ -210,13 +220,15 @@ class GoogleDocsBot(books_common.DataIO):
 
         try:
             # get the user's credentials and build the apps script service
-            appsscript_creds = get_credentials(credential_name, client_secret_path, self.appsscript_scope, app_name)
+            appsscript_creds = get_credentials(
+                credential_name, client_secret_path, self.appsscript_scope, self.app_name)
             appsscript_http = appsscript_creds.authorize(httplib2.Http())
             appsscript_service = discovery.build('script', 'v1', http=appsscript_http)
 
             # get the user's email for transferring ownership
             email_function = {"function": "getEmail", "parameters": []}
-            email_request = appsscript_service.scripts().run(body=email_function, scriptId=self.script_id) #The service objects are dynamically generated. pylint: disable=no-member
+            email_request = appsscript_service.scripts().run( #The service objects are dynamically generated. pylint: disable=no-member
+                body=email_function, scriptId=self.script_id)
             email_response = try_request_n_retries(email_request, self.max_retries)
             self.admin_email = email_response['response'].get('result', str)
 
@@ -232,15 +244,15 @@ class GoogleDocsBot(books_common.DataIO):
     def get_file_list(self):
         '''Returns a list of files accessible by the service account.'''
 
-        files_request = self.service.drive.files().list(fields="nextPageToken, files(id, name)")
+        files_request = self.service.drive().files().list(fields="nextPageToken, files(id, name)")
         files_results = try_request_n_retries(files_request, self.max_retries)
         files = files_results.get('files', [])
         next_page_token = files_results.get('nextPageToken')
 
         while next_page_token and next_page_token != '':
             #make sure to get the full list if required
-            files_request = self.service.drive.files().list(pageToken=next_page_token,
-                                                            fields="nextPageToken, files(id, name)")
+            files_request = self.service.drive().files().list(
+                pageToken=next_page_token, fields="nextPageToken, files(id, name)")
             files_results = try_request_n_retries(files_request, self.max_retries)
             files += files_results.get('files', [])
             next_page_token = files_results.get('nextPageToken')
@@ -273,8 +285,10 @@ class GoogleDocsBot(books_common.DataIO):
             range_start = 1
             user_info = {}
 
-            range_string = get_a1_notation(self.info_spread_names[1], 1, range_start, self.user_sheet_width, (range_start + self.fetch_number - 1))
-            users_request = self.service.sheets.spreadsheets().values().get(
+            range_string = get_a1_notation(self.info_spread_names[1], 1, range_start,
+                                           self.user_sheet_width,
+                                           (range_start + self.fetch_number - 1))
+            users_request = self.service.sheets().spreadsheets().values().get(
                 majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
             users_result = try_request_n_retries(users_request, self.max_retries)
             values = users_result.get('values', [])
@@ -285,9 +299,12 @@ class GoogleDocsBot(books_common.DataIO):
                         user_info[user[0]] = user
 
                 range_start += self.fetch_number
-                range_string = get_a1_notation(self.info_spread_names[1], 1, range_start, self.user_sheet_width, (range_start + self.fetch_number - 1))
+                range_string = get_a1_notation(self.info_spread_names[1],
+                                               1, range_start,
+                                               self.user_sheet_width,
+                                               (range_start + self.fetch_number - 1))
 
-                users_request = self.service.sheets.spreadsheets().values().get(
+                users_request = self.service.sheets().spreadsheets().values().get(
                     majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
                 users_result = try_request_n_retries(users_request, self.max_retries)
                 values = users_result.get('values', [])
@@ -329,9 +346,10 @@ class GoogleDocsBot(books_common.DataIO):
                 }
             ]
         }
-        new_sheet_request = self.service.sheets.spreadsheets().create(body=spreadsheet_body)
+        new_sheet_request = self.service.sheets().spreadsheets().create(body=spreadsheet_body)
         try:
-            new_sheet_response = try_request_n_retries(new_sheet_request, self.max_retries) #make the new spreadsheet
+            #make the new spreadsheet
+            new_sheet_response = try_request_n_retries(new_sheet_request, self.max_retries)
         except errors.HttpError:
             if self.should_print:
                 print('Failed to create the new User spreadsheet')
@@ -345,13 +363,14 @@ class GoogleDocsBot(books_common.DataIO):
             'role': 'owner',
             'emailAddress': self.admin_email
         }
-        share_request = self.service.drive.permissions().create(
+        share_request = self.service.drive().permissions().create(
             fileId=new_sheet_file_id,
             body=user_permission,
             fields='id',
             transferOwnership=True) #only required for 'owner' permission
 
-        share_response = try_request_n_retries(share_request, self.max_retries) #share the new spreadsheet
+        #share the new spreadsheet
+        share_response = try_request_n_retries(share_request, self.max_retries)
         #end sharing code
 
         return True
@@ -392,7 +411,8 @@ class GoogleDocsBot(books_common.DataIO):
             raise SpreadsheetFormatError('Requested User does not exist.')
 
         getbooks_function = {"function": "getBookList", "parameters": [get_form_id]}
-        getbooks_request = self.service.appsscript.scripts().run(body=getbooks_function, scriptId=self.script_id)
+        getbooks_request = self.service.appsscript().scripts().run(
+            body=getbooks_function, scriptId=self.script_id)
         getbooks_response = try_request_n_retries(getbooks_request, self.max_retries)
 
         rawbooks_list = getbooks_response['response'].get('result', [])
@@ -413,8 +433,11 @@ class GoogleDocsBot(books_common.DataIO):
             range_start = 1
             history = []
 
-            range_string = get_a1_notation(self.info_spread_names[2], 1, range_start, self.history_sheet_width, (range_start + self.fetch_number - 1))
-            history_request = self.service.sheets.spreadsheets().values().get(
+            range_string = get_a1_notation(self.info_spread_names[2],
+                                           1, range_start,
+                                           self.history_sheet_width,
+                                           (range_start + self.fetch_number - 1))
+            history_request = self.service.sheets().spreadsheets().values().get(
                 majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
             history_result = try_request_n_retries(history_request, self.max_retries)
             values = history_result.get('values', [])
@@ -425,9 +448,12 @@ class GoogleDocsBot(books_common.DataIO):
                         history.append(book)
 
                 range_start += self.fetch_number
-                range_string = get_a1_notation(self.info_spread_names[2], 1, range_start, self.history_sheet_width, (range_start + self.fetch_number - 1))
+                range_string = get_a1_notation(self.info_spread_names[2],
+                                               1, range_start,
+                                               self.history_sheet_width,
+                                               (range_start + self.fetch_number - 1))
 
-                history_request = self.service.sheets.spreadsheets().values().get(
+                history_request = self.service.sheets().spreadsheets().values().get(
                     majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
                 history_result = try_request_n_retries(history_request, self.max_retries)
                 values = history_result.get('values', [])
@@ -446,26 +472,28 @@ class GoogleDocsBot(books_common.DataIO):
                 print('User already exists.')
             return False
 
-        userform_function = {"function": "makeBooksForm", "parameters": [self.service_email, username]}
-        userform_request = self.service.appsscript.scripts().run(body=userform_function, scriptId=self.script_id)
+        userform_function = {"function": "makeBooksForm",
+                             "parameters": [self.service_email, username]}
+        userform_request = self.service.appsscript().scripts().run(
+            body=userform_function, scriptId=self.script_id)
         userform_response = try_request_n_retries(userform_request, self.max_retries)
 
         userform_dict = userform_response['response'].get('result', {})
-        userform_link = userform_dict['form_url']
-        userform_id = userform_dict['form_id']
 
-        user_record = [username, user_email, userform_link, userform_id]
+        user_record = [username, user_email, userform_dict['form_url'], userform_dict['form_id']]
 
-        new_record_number = len(existing_user_names) + 1
-        range_string = get_a1_notation(self.info_spread_names[1], 1, new_record_number, self.user_sheet_width, new_record_number)
-        user_sheet_id = self.get_book_club_info_sheet_id()
+        range_string = get_a1_notation(self.info_spread_names[1],
+                                       1, len(existing_user_names) + 1,
+                                       self.user_sheet_width, len(existing_user_names) + 1)
+
         update_body = {
             "range": range_string,
             "majorDimension": "ROWS",
             "values": [user_record],
         }
-        update_request = self.service.sheets.spreadsheets().values().update(
-            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
+        update_request = self.service.sheets().spreadsheets().values().update(
+            spreadsheetId=self.get_book_club_info_sheet_id(), range=range_string,
+            valueInputOption='RAW', body=update_body)
 
         update_response = try_request_n_retries(update_request, self.max_retries)
 
@@ -473,7 +501,7 @@ class GoogleDocsBot(books_common.DataIO):
         temp_user_table[username] = user_record
         self.cache.set_value(self.user_table, temp_user_table)
 
-        return books_common.User(username, user_email, [], userform_link)
+        return books_common.User(username, user_email, [], userform_dict['form_url'])
 
     def remove_book(self, book):
         '''Deletes a book from a user's remote list.'''
@@ -486,7 +514,8 @@ class GoogleDocsBot(books_common.DataIO):
         response_id = loc.get_response_id()
 
         delbook_function = {"function": "delResponse", "parameters": [form_id, response_id]}
-        delbook_request = self.service.appsscript.scripts().run(body=delbook_function, scriptId=self.script_id)
+        delbook_request = self.service.appsscript().scripts().run(
+            body=delbook_function, scriptId=self.script_id)
         delbook_response = try_request_n_retries(delbook_request, self.max_retries)
 
         return True
@@ -497,18 +526,22 @@ class GoogleDocsBot(books_common.DataIO):
         history = self.get_history()
         date = time.strftime('%Y/%m/%d')
 
-        winner_record = [date, book.get_title(), book.get_author_first_name(), book.get_author_last_name()]
+        winner_record = [date, book.get_title(), book.get_author_first_name(),
+                         book.get_author_last_name()]
 
         new_record_number = len(history) + 1
-        range_string = get_a1_notation(self.info_spread_names[2], 1, new_record_number, self.history_sheet_width, new_record_number)
+        range_string = get_a1_notation(self.info_spread_names[2],
+                                       1, new_record_number,
+                                       self.history_sheet_width, new_record_number)
         user_sheet_id = self.get_book_club_info_sheet_id()
         update_body = {
             "range": range_string,
             "majorDimension": "ROWS",
             "values": [winner_record],
         }
-        update_request = self.service.sheets.spreadsheets().values().update(
-            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
+        update_request = self.service.sheets().spreadsheets().values().update(
+            spreadsheetId=user_sheet_id, range=range_string,
+            valueInputOption='RAW', body=update_body)
 
         update_response = try_request_n_retries(update_request, self.max_retries)
 
@@ -520,8 +553,10 @@ class GoogleDocsBot(books_common.DataIO):
 
         user_sheet_id = self.get_book_club_info_sheet_id()
 
-        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1], self.poll_id_position[0], self.poll_id_position[1])
-        request = self.service.sheets.spreadsheets().values().get(
+        range_string = get_a1_notation(self.info_spread_names[3],
+                                       self.poll_id_position[0], self.poll_id_position[1],
+                                       self.poll_id_position[0], self.poll_id_position[1])
+        request = self.service.sheets().spreadsheets().values().get(
             majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
         result = try_request_n_retries(request, self.max_retries)
         values = result.get('values', [])
@@ -534,17 +569,19 @@ class GoogleDocsBot(books_common.DataIO):
             return None
 
         getpoll_function = {"function": "getPollInfo", "parameters": [current_poll_id]}
-        getpoll_request = self.service.appsscript.scripts().run(body=getpoll_function, scriptId=self.script_id)
-        getpoll_response = try_request_n_retries(getpoll_request, self.max_retries)
+        request = self.service.appsscript().scripts().run(
+            body=getpoll_function, scriptId=self.script_id)
+        response = try_request_n_retries(request, self.max_retries)
 
-        poll_dict = getpoll_response['response'].get('result', {})
+        poll_dict = response['response'].get('result', {})
 
-        option_count = len(poll_dict['options'])
-        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1] + 1, self.location_width, option_count + 1)
-        location_request = self.service.sheets.spreadsheets().values().get(
+        range_string = get_a1_notation(self.info_spread_names[3],
+                                       self.poll_id_position[0], self.poll_id_position[1] + 1,
+                                       self.location_width, len(poll_dict['options']) + 1)
+        request = self.service.sheets().spreadsheets().values().get(
             majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
-        location_result = try_request_n_retries(location_request, self.max_retries)
-        values = location_result.get('values', [])
+        response = try_request_n_retries(request, self.max_retries)
+        values = response.get('values', [])
 
         location_dict = {}
         for row in values:
@@ -552,7 +589,7 @@ class GoogleDocsBot(books_common.DataIO):
 
         options = []
         scores = []
-        for i in range(option_count):
+        for i in range(len(poll_dict['options'])):
             id_string = poll_dict['options'][i]
             title, author = id_string.split(': ', maxsplit=1)
             last, first = author.split(', ', maxsplit=1)
@@ -560,51 +597,54 @@ class GoogleDocsBot(books_common.DataIO):
             options.append(books_common.Book(title, first, last, location_dict[id_string], self))
             scores.append(int(poll_dict['scores'][i]))
 
-        form_link = poll_dict['url']
+        date = books_common.Date(int(poll_dict['date']['year']),
+                                 int(poll_dict['date']['month']),
+                                 int(poll_dict['date']['day']))
 
-        date_created = books_common.Date(int(poll_dict['date']['year']),
-                                         int(poll_dict['date']['month']),
-                                         int(poll_dict['date']['day']))
-
-        return books_common.Poll(options, scores, form_link, current_poll_id, date_created, self)
+        return books_common.Poll(options, scores, poll_dict['url'], current_poll_id, date, self)
 
     def new_poll(self, options):
-        '''Replaces the old poll with the provided poll. close_poll should often be called on the old poll first.'''
+        '''Replaces the old poll with the provided poll.
+        close_poll should often be called on the old poll first.'''
 
         string_options = []
         location_data = []
         for i in options:
-            identifier = i.get_title() + ': ' + i.get_author_last_name() + ', ' + i.get_author_first_name()
+            identifier = i.get_title() + ': ' + i.get_author_last_name()
+            identifier += ', ' + i.get_author_first_name()
             string_options.append(identifier)
 
             loc = i.location
             location_data.append([identifier, loc.get_form_id(), loc.get_response_id()])
 
-        makepoll_function = {"function": "makePollForm", "parameters": [self.service_email, string_options]}
-        makepoll_request = self.service.appsscript.scripts().run(body=makepoll_function, scriptId=self.script_id)
+        makepoll_function = {"function": "makePollForm",
+                             "parameters": [self.service_email, string_options]}
+        makepoll_request = self.service.appsscript().scripts().run(
+            body=makepoll_function, scriptId=self.script_id)
         makepoll_response = try_request_n_retries(makepoll_request, self.max_retries)
 
         pollform_dict = makepoll_response['response'].get('result', {})
-        pollform_link = pollform_dict['form_url']
-        pollform_id = pollform_dict['form_id']
+        poll_link = pollform_dict['form_url']
+        poll_id = pollform_dict['form_id']
 
-        range_string = get_a1_notation(self.info_spread_names[3], self.poll_id_position[0], self.poll_id_position[1], self.location_width, len(location_data) + 1)
+        range_string = get_a1_notation(self.info_spread_names[3],
+                                       self.poll_id_position[0], self.poll_id_position[1],
+                                       self.location_width, len(location_data) + 1)
         user_sheet_id = self.get_book_club_info_sheet_id()
         update_body = {
             "range": range_string,
             "majorDimension": "ROWS",
-            "values": [[pollform_id]] + location_data,
+            "values": [[poll_id]] + location_data,
         }
-        update_request = self.service.sheets.spreadsheets().values().update(
-            spreadsheetId=user_sheet_id, range=range_string, valueInputOption='RAW', body=update_body)
+        update_request = self.service.sheets().spreadsheets().values().update(
+            spreadsheetId=user_sheet_id, range=range_string,
+            valueInputOption='RAW', body=update_body)
         update_response = try_request_n_retries(update_request, self.max_retries)
 
-        scores = [0] * len(options)
-
         now = time.localtime()
-        date_created = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
+        date = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
 
-        return books_common.Poll(options, scores, pollform_link, pollform_id, date_created, self)
+        return books_common.Poll(options, [0] * len(options), poll_link, poll_id, date, self)
 
     def close_poll(self, poll):
         '''Stops the poll from accepting responses.'''
@@ -612,5 +652,6 @@ class GoogleDocsBot(books_common.DataIO):
         poll_id = poll.form_id
 
         closepoll_function = {"function": "closeForm", "parameters": [poll_id]}
-        closepoll_request = self.service.appsscript.scripts().run(body=closepoll_function, scriptId=self.script_id)
+        closepoll_request = self.service.appsscript().scripts().run(
+            body=closepoll_function, scriptId=self.script_id)
         closepoll_response = try_request_n_retries(closepoll_request, self.max_retries)
