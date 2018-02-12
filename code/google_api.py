@@ -39,7 +39,7 @@ def get_credentials(credential_name, client_secret_file, scopes, application_nam
         credentials = tools.run_flow(flow, store)
     return credentials
 
-def try_request_n_retries(request, times):
+def try_request_n_retries(request, times, retry_time=1):
     '''Tries a request up to some number of times. Only retries on failure.'''
 
     for i in range(1, times + 1):
@@ -54,7 +54,7 @@ def try_request_n_retries(request, times):
             if i == times: #It's the last possible try
                 raise
             else:
-                time.sleep(1)
+                time.sleep(retry_time)
         else:
             return result
 
