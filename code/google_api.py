@@ -316,7 +316,7 @@ class GoogleDocsBot(books_common.DataIO):
     def make_new_book_club(self):
         '''Creates the document structure for a new book club. Returns success.'''
 
-        #start checking for old book club code
+        #start checking for old book club
         files = self.get_file_list()
         if files:
             for item in files:
@@ -326,7 +326,7 @@ class GoogleDocsBot(books_common.DataIO):
                     return False #Can't make a new book club when there is already one
         #end checking for old book club code
 
-        #start creating new book club code
+        #start creating new book club
         spreadsheet_body = {
             "properties": {
                 "title": self.info_spread_names[0]
@@ -357,7 +357,7 @@ class GoogleDocsBot(books_common.DataIO):
         new_sheet_file_id = new_sheet_response['spreadsheetId']
         #end creating new book club code
 
-        #start sharing code
+        #start sharing
         user_permission = {
             'type': 'user',
             'role': 'owner',
@@ -401,6 +401,7 @@ class GoogleDocsBot(books_common.DataIO):
     def get_user_books(self, user):
         '''Returns the list of books entered by the user and updates the user object's book list.'''
 
+        #start finding user
         username = user.get_user_name()
         get_form_id = None
         user_table = self.get_user_table()
@@ -409,17 +410,23 @@ class GoogleDocsBot(books_common.DataIO):
             get_form_id = user_table[username][3]
         else:
             raise SpreadsheetFormatError('Requested User does not exist.')
+        #end finding user code
 
+        #start getting raw books
         getbooks_function = {"function": "getBookList", "parameters": [get_form_id]}
         getbooks_request = self.service.appsscript().scripts().run(
             body=getbooks_function, scriptId=self.script_id)
         getbooks_response = try_request_n_retries(getbooks_request, self.max_retries)
-
         rawbooks_list = getbooks_response['response'].get('result', [])
+        #end getting raw books code
+
+        #start assembling book list
         books_list = [books_common.Book(i['title'], i['authorFirstName'], i['authorLastName'],
                                         FormLocation(get_form_id, i['formResponseId']), self)
                       for i in rawbooks_list]
+        #end assembling book list code
 
+        #replace the old books with the new ones
         user.replace_books(books_list)
 
         return books_list
@@ -465,13 +472,16 @@ class GoogleDocsBot(books_common.DataIO):
     def create_user(self, username, user_email):
         '''Creates all the data entries for a new user.'''
 
+        #start check if user exists
         existing_user_names = self.get_user_names()
 
         if username in existing_user_names:
             if self.should_print:
                 print('User already exists.')
             return False
+        #end check if user exists code
 
+        #start make the book input form
         userform_function = {"function": "makeBooksForm",
                              "parameters": [self.service_email, username]}
         userform_request = self.service.appsscript().scripts().run(
@@ -479,9 +489,12 @@ class GoogleDocsBot(books_common.DataIO):
         userform_response = try_request_n_retries(userform_request, self.max_retries)
 
         userform_dict = userform_response['response'].get('result', {})
+        #end make the book input form code
 
+        #assemble user record
         user_record = [username, user_email, userform_dict['form_url'], userform_dict['form_id']]
 
+        #start insert of user record
         range_string = get_a1_notation(self.info_spread_names[1],
                                        1, len(existing_user_names) + 1,
                                        self.user_sheet_width, len(existing_user_names) + 1)
@@ -496,10 +509,13 @@ class GoogleDocsBot(books_common.DataIO):
             valueInputOption='RAW', body=update_body)
 
         update_response = try_request_n_retries(update_request, self.max_retries)
+        #end insert of user record code
 
+        #start updating cache
         temp_user_table = self.get_user_table()
         temp_user_table[username] = user_record
         self.cache.set_value(self.user_table, temp_user_table)
+        #end updating cache code
 
         return books_common.User(username, user_email, [], userform_dict['form_url'])
 
@@ -551,6 +567,7 @@ class GoogleDocsBot(books_common.DataIO):
     def get_current_poll(self):
         '''Returns the currently ongoing book poll.'''
 
+        #start obtaining the current poll id
         user_sheet_id = self.get_book_club_info_sheet_id()
 
         range_string = get_a1_notation(self.info_spread_names[3],
@@ -567,14 +584,18 @@ class GoogleDocsBot(books_common.DataIO):
 
         if current_poll_id == '':
             return None
+        #end obtaining the current poll id code
 
+        #start getting the poll/response data
         getpoll_function = {"function": "getPollInfo", "parameters": [current_poll_id]}
         request = self.service.appsscript().scripts().run(
             body=getpoll_function, scriptId=self.script_id)
         response = try_request_n_retries(request, self.max_retries)
 
         poll_dict = response['response'].get('result', {})
+        #end getting the poll/response data code
 
+        #start getting the response location data
         range_string = get_a1_notation(self.info_spread_names[3],
                                        self.poll_id_position[0], self.poll_id_position[1] + 1,
                                        self.location_width, len(poll_dict['options']) + 1)
@@ -582,7 +603,9 @@ class GoogleDocsBot(books_common.DataIO):
             majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
         response = try_request_n_retries(request, self.max_retries)
         values = response.get('values', [])
+        #end getting the response location data code
 
+        #start parsing poll/response/location data
         location_dict = {}
         for row in values:
             location_dict[row[0]] = FormLocation(row[1], row[2])
@@ -600,6 +623,7 @@ class GoogleDocsBot(books_common.DataIO):
         date = books_common.Date(int(poll_dict['date']['year']),
                                  int(poll_dict['date']['month']),
                                  int(poll_dict['date']['day']))
+        #end parsing poll/response/location data code
 
         return books_common.Poll(options, scores, poll_dict['url'], current_poll_id, date, self)
 
@@ -607,6 +631,7 @@ class GoogleDocsBot(books_common.DataIO):
         '''Replaces the old poll with the provided poll.
         close_poll should often be called on the old poll first.'''
 
+        #start seperating location data
         string_options = []
         location_data = []
         for i in options:
@@ -616,7 +641,9 @@ class GoogleDocsBot(books_common.DataIO):
 
             loc = i.location
             location_data.append([identifier, loc.get_form_id(), loc.get_response_id()])
+        #end seperating location data code
 
+        #start creating the new poll
         makepoll_function = {"function": "makePollForm",
                              "parameters": [self.service_email, string_options]}
         makepoll_request = self.service.appsscript().scripts().run(
@@ -626,7 +653,9 @@ class GoogleDocsBot(books_common.DataIO):
         pollform_dict = makepoll_response['response'].get('result', {})
         poll_link = pollform_dict['form_url']
         poll_id = pollform_dict['form_id']
+        #end creating the new poll code
 
+        #start updating the poll id and location data
         range_string = get_a1_notation(self.info_spread_names[3],
                                        self.poll_id_position[0], self.poll_id_position[1],
                                        self.location_width, len(location_data) + 1)
@@ -640,7 +669,9 @@ class GoogleDocsBot(books_common.DataIO):
             spreadsheetId=user_sheet_id, range=range_string,
             valueInputOption='RAW', body=update_body)
         update_response = try_request_n_retries(update_request, self.max_retries)
+        #end updating the poll id and location data code
 
+        #the poll was created now.
         now = time.localtime()
         date = books_common.Date(now.tm_year, now.tm_mon, now.tm_mday)
 
