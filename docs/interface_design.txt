@@ -1,0 +1,24 @@
+Top level:
+---
+-view poll info
+-start new poll
+-close poll
+
+-add a new user
+-modify existing user
+
+-view history
+---
+
+modify existing user:
+---
+(list of existing users)
+-go back
+---
+
+(existing user's username):
+---
+-remove a book
+-delete user
+-go back
+---

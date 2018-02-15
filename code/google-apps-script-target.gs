@@ -23,6 +23,7 @@ function makeBooksForm(service_email, user_name) {
   var temp_str = user_name + "'s Book Suggestion Input";
   var input_form = FormApp.create(temp_str);
   input_form.setTitle(temp_str);
+  input_form.setPublishingSummary(true);
   
   temp_str = new_book_title_prompt;
   var temp_question = input_form.addTextItem();

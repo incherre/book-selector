@@ -194,6 +194,9 @@ class GoogleDocsBot(books_common.DataIO):
     max_retries = 5
     fetch_number = 10
 
+    title_sep = '\uff1a '
+    author_sep = ', '
+
     def __init__(self, credential_path, client_secret_path, credential_name, script_id):
         super().__init__()
 
@@ -372,6 +375,8 @@ class GoogleDocsBot(books_common.DataIO):
         #share the new spreadsheet
         share_response = try_request_n_retries(share_request, self.max_retries)
         #end sharing code
+
+        self.cache.set_value(self.book_club_sheet_id, new_sheet_file_id)
 
         return True
 
@@ -614,8 +619,8 @@ class GoogleDocsBot(books_common.DataIO):
         scores = []
         for i in range(len(poll_dict['options'])):
             id_string = poll_dict['options'][i]
-            title, author = id_string.split(': ', maxsplit=1)
-            last, first = author.split(', ', maxsplit=1)
+            title, author = id_string.split(self.title_sep, maxsplit=1)
+            last, first = author.split(self.author_sep, maxsplit=1)
 
             options.append(books_common.Book(title, first, last, location_dict[id_string], self))
             scores.append(int(poll_dict['scores'][i]))
@@ -635,8 +640,8 @@ class GoogleDocsBot(books_common.DataIO):
         string_options = []
         location_data = []
         for i in options:
-            identifier = i.get_title() + ': ' + i.get_author_last_name()
-            identifier += ', ' + i.get_author_first_name()
+            identifier = i.get_title() + self.title_sep + i.get_author_last_name()
+            identifier += self.author_sep + i.get_author_first_name()
             string_options.append(identifier)
 
             loc = i.location
