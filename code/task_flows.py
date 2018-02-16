@@ -1,5 +1,8 @@
 '''A collection of functions that perform various book club tasks.'''
 
+import random
+import time
+
 import books_common
 import google_api
 
@@ -23,11 +26,47 @@ def create_new_book_club(g_api):
 
 def create_poll(g_api, n=4):
     '''Creates a new poll with n options.'''
-    pass
+    names = g_api.get_user_names()
+    p_users = []
+
+    while len(p_users) < n:
+        num_to_choose = (n - len(p_users)
+
+        if len(names) < num_to_choose):
+            #not enough users (who have books)
+            return False
+
+        potentials = random.sample(names, num_to_choose)
+        for username in potentials:
+            #remove the already selected users
+            names.remove(username)
+
+            #build the user structure
+            user = g_api.get_user_info(username)
+            g_api.get_user_books(user)
+
+            if user.get_num_books() > 0:
+                #only add the user if there are books to select
+                p_users.append(user)
+
+    books = []
+    for user in p_users:
+        books.append(random.choice(user.get_books()))
+
+    g_api.new_poll(books)
+
+    return True
 
 def end_poll(g_api):
     '''Ends the current poll and selects a winner.'''
-    pass
+    poll = g_api.get_current_poll()
+    poll.close_voting()
+    time.sleep(1) #let it settle
+    poll.update_results()
+    winner = poll.get_winner()
+    g_api.add_winner(winner)
+    winner.delete() #remove the winner from it's owner's list
+    return winner
 
 def create_new_user(g_api, username, user_email):
     '''Creates the infrastructure for a new user.'''
