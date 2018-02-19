@@ -45,6 +45,15 @@ class BaseDataIOWithoutErrorInit(books_common.DataIO):
     def remove_book(self, book):
         return super().remove_book(book)
 
+    def send_email(self, destination_address, subject, body):
+        return super().send_email(destination_address, subject, body)
+
+    def remove_user(self, user):
+        return super().remove_user(user)
+
+    def delete_doc(self, doc_id):
+        return super().delete_doc(doc_id)
+
 class LocationAllTrue(books_common.Location):
     def __init__(self):
         pass
@@ -61,7 +70,7 @@ class LocationAllFalse(books_common.Location):
 
 class DataIOAllSuccess(BaseDataIOWithoutErrorInit):
     '''Anything that returns a success returns true'''
-    
+
     def create_user(self, user):
         return True
 
@@ -75,6 +84,15 @@ class DataIOAllSuccess(BaseDataIOWithoutErrorInit):
         return True
 
     def add_winner(self, book):
+        return True
+
+    def send_email(self, destination_address, subject, body):
+        return True
+
+    def remove_user(self, user):
+        return True
+
+    def delete_doc(self, doc_id):
         return True
 
 class DataIOAllFail(BaseDataIOWithoutErrorInit):
@@ -93,6 +111,15 @@ class DataIOAllFail(BaseDataIOWithoutErrorInit):
         return False
 
     def add_winner(self, book):
+        return False
+
+    def send_email(self, destination_address, subject, body):
+        return False
+
+    def remove_user(self, user):
+        return False
+
+    def delete_doc(self, doc_id):
         return False
 
 class BaseDataIOReturnPoll(BaseDataIOWithoutErrorInit):
@@ -353,7 +380,10 @@ class TestPollMethods(unittest.TestCase):
         self.t_dateCreated = books_common.Date(2000, 1, 1)
         self.t_data_io = data_io
 
-        self.t_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
+        self.t_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, data_io)
+        self.t_succeed_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllSuccess())
+        self.t_fail_poll = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, DataIOAllFail())
+
 
     def tearDown(self):
         del self.t_options
@@ -364,6 +394,8 @@ class TestPollMethods(unittest.TestCase):
         del self.t_data_io
 
         del self.t_poll
+        del self.t_succeed_poll
+        del self.t_fail_poll
 
     def test_init(self):
         testVar = books_common.Poll(self.t_options, self.t_scores, self.t_formLink, self.t_formId, self.t_dateCreated, self.t_data_io)
@@ -446,6 +478,10 @@ class TestPollMethods(unittest.TestCase):
         for i in range(len(testPoll.scores)):
             self.assertEqual(newScores[i], testPoll.scores[i])
 
+    def test_delete(self):
+        self.assertTrue(self.t_succeed_poll.delete())
+        self.assertFalse(self.t_fail_poll.delete())
+
 class TestLocationMethods(unittest.TestCase):
     def test_init(self):
         with self.assertRaises(TypeError):
@@ -502,6 +538,15 @@ class TestDataIOMethods(unittest.TestCase):
 
     def test_add_winner(self):
         self.assertRaises(NotImplementedError, self.testIO.add_winner, self.testBook)
+
+    def test_send_email(self):
+        self.assertRaises(NotImplementedError, self.testIO.send_email, 'test@email.com', 'subject', 'body')
+
+    def test_remove_user(self):
+        self.assertRaises(NotImplementedError, self.testIO.remove_user, 'some user')
+
+    def test_delete_doc(self):
+        self.assertRaises(NotImplementedError, self.testIO.delete_doc, 'doc_id')
 
 if __name__ == '__main__':
     unittest.main()

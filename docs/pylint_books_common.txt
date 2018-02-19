@@ -1,8 +1,8 @@
 ************* Module books_common
-R:  8, 4: Too many arguments (6/5) (too-many-arguments)
-R:166, 4: Too many arguments (7/5) (too-many-arguments)
-R:238, 0: Too few public methods (1/2) (too-few-public-methods)
+R:  9, 4: Too many arguments (6/5) (too-many-arguments)
+R:167, 4: Too many arguments (7/5) (too-many-arguments)
+R:243, 0: Too few public methods (1/2) (too-few-public-methods)
 
 ------------------------------------------------------------------
-Your code has been rated at 9.81/10 (previous run: 9.29/10, +0.52)
+Your code has been rated at 9.82/10 (previous run: 9.82/10, +0.01)
 

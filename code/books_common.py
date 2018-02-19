@@ -236,6 +236,10 @@ class Poll:
         if hasattr(self, 'winner'):
             del self.winner
 
+    def delete(self):
+        '''Removes this poll from the database.'''
+        return self.data_io.delete_doc(self.form_id)
+
 class Location(ABC):
     '''An abstract class representing where a book is stored'''
 
@@ -305,3 +309,18 @@ class DataIO(ABC):
     def add_winner(self, book):
         '''Abstract method. Adds a book to the winner history.'''
         raise NotImplementedError('Abstract method "addWinner" not implemented')
+
+    @abstractmethod
+    def send_email(self, destination_address, subject, body):
+        '''Abstract method. Sends an email, used to convey account info.'''
+        raise NotImplementedError('Abstract method "send_email" not implemented')
+
+    @abstractmethod
+    def remove_user(self, user):
+        '''Abstract method. Removes all record of a user.'''
+        raise NotImplementedError('Abstract method "remove_user" not implemented')
+
+    @abstractmethod
+    def delete_doc(self, doc_id):
+        '''Abstract method. Removes a document.'''
+        raise NotImplementedError('Abstract method "delete_doc" not implemented')
