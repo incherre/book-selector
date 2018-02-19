@@ -70,7 +70,8 @@ def end_poll(g_api):
 
 def create_new_user(g_api, username, user_email):
     '''Creates the infrastructure for a new user.'''
-    pass
+    user = g_api.create_user(username, user_email)
+    return user
 
 def delete_user(g_api, username):
     '''Deletes all record of user.'''
@@ -78,4 +79,5 @@ def delete_user(g_api, username):
 
 def delete_user_book(g_api, user, book_index):
     '''Deletes the book at user.books[book_index]'''
-    pass
+    book = user.get_books()[book_index]
+    book.delete()
