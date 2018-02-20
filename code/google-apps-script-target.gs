@@ -205,3 +205,11 @@ function closeForm(form_id) {
   
   form.setAcceptingResponses(false);
 }
+  
+/**
+ * Sends an email. Used to inform book club members of new polls, etc.
+ */
+
+function sendEmail(destination_address, subject, body) {
+  GmailApp.sendEmail(destination_address, subject, body);
+}

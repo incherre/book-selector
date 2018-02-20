@@ -175,7 +175,8 @@ class GoogleDocsBot(books_common.DataIO):
     service_scope = ['https://www.googleapis.com/auth/drive',
                      'https://www.googleapis.com/auth/spreadsheets']
 
-    appsscript_scope = ['https://www.googleapis.com/auth/drive',
+    appsscript_scope = ['https://mail.google.com/',
+                        'https://www.googleapis.com/auth/drive',
                         'https://www.googleapis.com/auth/forms',
                         'https://www.googleapis.com/auth/userinfo.email']
 
@@ -378,7 +379,7 @@ class GoogleDocsBot(books_common.DataIO):
 
         self.cache.set_value(self.book_club_sheet_id, new_sheet_file_id)
 
-        return True
+        return not 'error' in share_response
 
     def get_user_names(self):
         '''Returns a list of usernames.'''
@@ -569,6 +570,8 @@ class GoogleDocsBot(books_common.DataIO):
         history.append(winner_record)
         self.cache.set_value(self.history, history)
 
+        return not 'error' in update_response
+
     def get_current_poll(self):
         '''Returns the currently ongoing book poll.'''
 
@@ -691,3 +694,24 @@ class GoogleDocsBot(books_common.DataIO):
         closepoll_request = self.service.appsscript().scripts().run(
             body=closepoll_function, scriptId=self.script_id)
         closepoll_response = try_request_n_retries(closepoll_request, self.max_retries)
+
+        return not 'error' in closepoll_response
+
+    def send_email(self, destination_address, subject, body):
+        '''Sends an email, used to convey account info.'''
+
+        email_function = {"function": "sendEmail",
+                          "parameters": [destination_address, subject, body]}
+        email_request = self.service.appsscript().scripts().run(
+            body=email_function, scriptId=self.script_id)
+        email_response = try_request_n_retries(email_request, self.max_retries)
+
+        return not 'error' in email_response
+
+    def remove_user(self, user):
+        '''Abstract method. Removes all record of a user.'''
+        raise NotImplementedError('Abstract method "remove_user" not implemented')
+
+    def delete_doc(self, doc_id):
+        '''Abstract method. Removes a document.'''
+        raise NotImplementedError('Abstract method "delete_doc" not implemented')
