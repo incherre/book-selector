@@ -238,7 +238,7 @@ class Poll:
 
     def delete(self):
         '''Removes this poll from the database.'''
-        return self.data_io.delete_doc(self.form_id)
+        return self.data_io.delete_poll(self.form_id)
 
 class Location(ABC):
     '''An abstract class representing where a book is stored'''
@@ -321,6 +321,6 @@ class DataIO(ABC):
         raise NotImplementedError('Abstract method "remove_user" not implemented')
 
     @abstractmethod
-    def delete_doc(self, doc_id):
-        '''Abstract method. Removes a document.'''
-        raise NotImplementedError('Abstract method "delete_doc" not implemented')
+    def delete_poll(self, poll_id):
+        '''Abstract method. Removes a poll.'''
+        raise NotImplementedError('Abstract method "delete_poll" not implemented')

@@ -51,8 +51,8 @@ class BaseDataIOWithoutErrorInit(books_common.DataIO):
     def remove_user(self, user):
         return super().remove_user(user)
 
-    def delete_doc(self, doc_id):
-        return super().delete_doc(doc_id)
+    def delete_poll(self, doc_id):
+        return super().delete_poll(doc_id)
 
 class LocationAllTrue(books_common.Location):
     def __init__(self):
@@ -92,7 +92,7 @@ class DataIOAllSuccess(BaseDataIOWithoutErrorInit):
     def remove_user(self, user):
         return True
 
-    def delete_doc(self, doc_id):
+    def delete_poll(self, doc_id):
         return True
 
 class DataIOAllFail(BaseDataIOWithoutErrorInit):
@@ -119,7 +119,7 @@ class DataIOAllFail(BaseDataIOWithoutErrorInit):
     def remove_user(self, user):
         return False
 
-    def delete_doc(self, doc_id):
+    def delete_poll(self, doc_id):
         return False
 
 class BaseDataIOReturnPoll(BaseDataIOWithoutErrorInit):
@@ -545,8 +545,8 @@ class TestDataIOMethods(unittest.TestCase):
     def test_remove_user(self):
         self.assertRaises(NotImplementedError, self.testIO.remove_user, 'some user')
 
-    def test_delete_doc(self):
-        self.assertRaises(NotImplementedError, self.testIO.delete_doc, 'doc_id')
+    def test_delete_poll(self):
+        self.assertRaises(NotImplementedError, self.testIO.delete_poll, 'doc_id')
 
 if __name__ == '__main__':
     unittest.main()
