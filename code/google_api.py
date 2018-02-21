@@ -590,7 +590,7 @@ class GoogleDocsBot(books_common.DataIO):
         if values and values[0] and values[0][0]:
             current_poll_id = values[0][0]
 
-        if current_poll_id == '':
+        if current_poll_id.strip() == '':
             return None
         #end obtaining the current poll id code
 
@@ -713,5 +713,50 @@ class GoogleDocsBot(books_common.DataIO):
         raise NotImplementedError('Abstract method "remove_user" not implemented')
 
     def delete_doc(self, doc_id):
-        '''Abstract method. Removes a document.'''
-        raise NotImplementedError('Abstract method "delete_doc" not implemented')
+        '''Removes a document.'''
+
+        del_function = {"function": "deleteDoc",
+                        "parameters": [doc_id]}
+        del_request = self.service.appsscript().scripts().run(
+            body=del_function, scriptId=self.script_id)
+        del_response = try_request_n_retries(del_request, self.max_retries)
+
+        return not 'error' in del_response
+
+    def delete_poll(self, poll_id):
+        '''Deletes a poll. If it is the current poll, clear that entry.'''
+
+        #start obtaining the current poll id
+        user_sheet_id = self.get_book_club_info_sheet_id()
+
+        range_string = get_a1_notation(self.info_spread_names[3],
+                                       self.poll_id_position[0], self.poll_id_position[1],
+                                       self.poll_id_position[0], self.poll_id_position[1])
+        request = self.service.sheets().spreadsheets().values().get(
+            majorDimension='ROWS', spreadsheetId=user_sheet_id, range=range_string)
+        result = try_request_n_retries(request, self.max_retries)
+        values = result.get('values', [])
+
+        current_poll_id = ''
+        if values and values[0] and values[0][0]:
+            current_poll_id = values[0][0]
+        #end obtaining the current poll id code
+
+        #delete the doc
+        self.delete_doc(poll_id)
+
+        #maybe clear the id
+        if current_poll_id == poll_id:
+            update_body = {
+                "range": range_string,
+                "majorDimension": "ROWS",
+                "values": [['']]
+            }
+            update_request = self.service.sheets().spreadsheets().values().update(
+                spreadsheetId=user_sheet_id, range=range_string,
+                valueInputOption='RAW', body=update_body)
+            update_response = try_request_n_retries(update_request, self.max_retries)
+
+            return not 'error' in update_response
+
+        return True

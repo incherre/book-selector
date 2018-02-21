@@ -213,3 +213,12 @@ function closeForm(form_id) {
 function sendEmail(destination_address, subject, body) {
   GmailApp.sendEmail(destination_address, subject, body);
 }
+
+/**
+ * Deletes a document.
+ */
+
+function deleteDoc(doc_id) {
+  var file = DriveApp.getFileById(doc_id);
+  file.setTrashed(true);
+}
