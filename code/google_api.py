@@ -709,8 +709,36 @@ class GoogleDocsBot(books_common.DataIO):
         return not 'error' in email_response
 
     def remove_user(self, user):
-        '''Abstract method. Removes all record of a user.'''
-        raise NotImplementedError('Abstract method "remove_user" not implemented')
+        '''Removes all record of a user.'''
+
+        user_info = self.get_user_table()
+        user_name = user.get_user_name()
+        if not user_name in user_info:
+            return False
+
+        form_id = user_info[user_name][3]
+        self.delete_doc(form_id)
+
+        #start rewriting of user records
+        update_length = len(user_info)
+        del user_info[user_name]
+        range_string = get_a1_notation(self.info_spread_names[1], 1, 1,
+                                       self.user_sheet_width, update_length)
+
+        update_body = {
+            "range": range_string,
+            "majorDimension": "ROWS",
+            "values": list(user_info.values()) + [[''] * self.user_sheet_width],
+        }
+        update_request = self.service.sheets().spreadsheets().values().update(
+            spreadsheetId=self.get_book_club_info_sheet_id(), range=range_string,
+            valueInputOption='RAW', body=update_body)
+
+        update_response = try_request_n_retries(update_request, self.max_retries)
+        #end rewriting of user records code
+
+        self.cache.set_value(self.user_table, user_info)
+        return not 'error' in update_response
 
     def delete_doc(self, doc_id):
         '''Removes a document.'''
