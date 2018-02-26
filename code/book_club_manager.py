@@ -39,6 +39,7 @@ class HighLevelMenu(MenuItem):
 
     def display_options(self):
         '''Displays the possible selections.'''
+        print('\n%s:' % (self.name))
         option_num = 1
         for option in self.options:
             print('%2d) %s' % (option_num, option.get_name()))
@@ -52,39 +53,147 @@ class HighLevelMenu(MenuItem):
             try:
                 choice = int(input('Please enter the number of your choice: '))
             except ValueError:
+                print('Please enter an integer')
                 choice = 0
+            else:
+                if not (choice > 0 and choice <= len(self.options)):
+                    print('Please enter a number that appears on the menu')
         self.options[choice - 1].execute()
 
+class DynamicMenu(MenuItem):
+    '''A menu that generates the items.'''
+
+    def __init__(self, name, option_gen, other_options):
+        super().__init__(name, self.execute_choice)
+        self.option_gen = option_gen
+        self.other_options = other_options
+        self.options = None
+
+    def display_options(self):
+        '''Generates and displays the current opions.'''
+        print('\n%s:' % (self.name))
+        self.options = self.option_gen()
+        option_num = 1
+        for option in self.options:
+            print('%2d) %s' % (option_num, option.get_name()))
+            option_num += 1
+
+        for option in self.other_options:
+            print('%2d) %s' % (option_num, option.get_name()))
+            option_num += 1
+
+    def execute_choice(self):
+        '''Allows the user to choose and execute their choice.'''
+        choice = 0
+        while not (choice > 0 and choice <= len(self.options) + len(self.other_options)):
+            self.display_options()
+            try:
+                choice = int(input('Please enter the number of your choice: '))
+            except ValueError:
+                print('Please enter an integer')
+                choice = 0
+            else:
+                if not (choice > 0 and choice <= len(self.options) + len(self.other_options)):
+                    print('Please enter a number that appears on the menu')
+
+        true_choice = choice - 1
+        if true_choice < len(self.options):
+            self.options[true_choice].execute()
+        elif true_choice >= len(self.options):
+            true_choice -= len(self.options)
+            self.other_options[true_choice].execute()
+
+
 if __name__ == '__main__':
+    #----- External Functionality -----
     def view_poll_info():
         '''Displays the info for the current poll.'''
         print('poll info')
+        #TODO(incherre): Add functionality
 
     def start_new_poll():
         '''Deletes the old poll and begins a new poll.'''
         print('new poll started')
+        #TODO(incherre): Add functionality
 
     def close_poll():
         '''Stops the current poll from accepting new responses.'''
         print('poll closed')
+        #TODO(incherre): Add functionality
 
     def add_new_user():
         '''Adds a new user.'''
         print('new user added')
+        #TODO(incherre): Add functionality
 
     def view_history():
         '''Displays the history.'''
         print('history')
+        #TODO(incherre): Add functionality
+
+    def delete_user(user):
+        '''Removes a user from the records.'''
+        print(user + ' removed')
+        #TODO(incherre): Add functionality
+
+    def remove_all_books(user):
+        '''Removes all the books of a user.'''
+        print(user + "'s books removed")
+        #TODO(incherre): Add functionality
+
+    def remove_book(book):
+        '''Removes the book from the records.'''
+        print(book + ' removed')
+        #TODO(incherre): Add functionality
+    #----- End External Functionality -----
+
+    # just a little helper function
+    def make_lambda(function, *args, **kwargs):
+        '''Makes a static lambda fuction for some input.'''
+        return lambda: function(*args, **kwargs)
+
+    #----- Define Menu Structure -----
+    def book_gen(go_up, user):
+        '''Generates a list of book menu objects.'''
+        #TODO(incherre): Add functionality
+        return []
+
+    def user_gen(go_up):
+        '''Generates a list of user menu objects.'''
+        user_names = ['John', 'Susan', 'Sam', 'Rory', 'Jo']
+        user_menus = []
+
+        for name in user_names:
+            remove_book_function = make_lambda(book_gen, go_up, name)
+            temp_remove_book = DynamicMenu('Remove one of ' + name + "'s books", remove_book_function, [go_up])
+
+            remove_books_function = make_lambda(remove_all_books, name)
+            temp_remove_books = MenuItem('Remove all of ' + name + "'s books", remove_books_function)
+
+            del_user_function = make_lambda(delete_user, name)
+            temp_del_user = MenuItem('Delete ' + name, del_user_function)
+
+            temp_menu = HighLevelMenu(name, [temp_remove_book, temp_remove_books,
+                                             temp_del_user, go_up])
+            user_menus.append(temp_menu)
+
+        return user_menus
 
     VIEW_POLL = MenuItem('View poll info', view_poll_info)
     START_POLL = MenuItem('Start a new poll', start_new_poll)
     END_POLL = MenuItem('Close the current poll', close_poll)
     NEW_USER = MenuItem('Add a new user', add_new_user)
     HISTORY = MenuItem('View history', view_history)
+    RETURN_TL = MenuItem('Go back', lambda: None)
+    RETURN_USER = GoBackItem('Go back')
+    USER_OPTION = DynamicMenu('Manage users', make_lambda(user_gen, RETURN_USER), [RETURN_TL])
+    RETURN_USER.set_higher(USER_OPTION)
     EXIT_OPTION = MenuItem('Exit', exit)
 
     TOP_LEVEL = HighLevelMenu('The Book Club', [VIEW_POLL, START_POLL, END_POLL,
-                                                NEW_USER, HISTORY, EXIT_OPTION])
+                                                NEW_USER, USER_OPTION, HISTORY,
+                                                EXIT_OPTION])
+    #----- End Define Menu Structure -----
 
     while True:
         TOP_LEVEL.execute()

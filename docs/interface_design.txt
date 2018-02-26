@@ -19,6 +19,13 @@ modify existing user:
 (existing user's username):
 ---
 -remove a book
+-remove all books
 -delete user
+-go back
+---
+
+remove (user's username)'s books:
+---
+(list of user's books)
 -go back
 ---
