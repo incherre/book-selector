@@ -1,4 +1,6 @@
 '''The main file for the book club program.'''
+import books_common
+import google_api
 
 class MenuItem:
     '''A selectable item in a text based menu.'''
@@ -103,8 +105,24 @@ class DynamicMenu(MenuItem):
             true_choice -= len(self.options)
             self.other_options[true_choice].execute()
 
+def make_lambda(function, *args, **kwargs):
+    '''Makes a static lambda fuction for some input.'''
+    return lambda: function(*args, **kwargs)
 
 if __name__ == '__main__':
+    #----- Initialization -----
+    CRED_PATH = './creds/book-selector-key.json'
+    CLINT_SECRET_PATH = './creds/book-selector-userauth-key.json'
+    APP_NAME = 'Book Club'
+    CRED_NAME = 'bc-creds.json'
+    SCRIPT_ID = 'MnjtpoV6LOWSqGbn-qvMxHji8zG_MrsiO'
+
+    BOOK_BOT = google_api.GoogleDocsBot(CRED_PATH, CLINT_SECRET_PATH,
+                                        CRED_NAME, SCRIPT_ID)
+
+    USERS = {}
+    #----- End Initialization -----
+
     #----- External Functionality -----
     def view_poll_info():
         '''Displays the info for the current poll.'''
@@ -133,44 +151,51 @@ if __name__ == '__main__':
 
     def delete_user(user):
         '''Removes a user from the records.'''
-        print(user + ' removed')
+        print(user.get_user_name() + ' removed')
         #TODO(incherre): Add functionality
 
     def remove_all_books(user):
         '''Removes all the books of a user.'''
-        print(user + "'s books removed")
         #TODO(incherre): Add functionality
+        print(user.get_user_name() + "'s books removed")
 
     def remove_book(book):
         '''Removes the book from the records.'''
-        print(book + ' removed')
-        #TODO(incherre): Add functionality
+        book.delete()
+        print(book.get_title() + ' removed')
     #----- End External Functionality -----
-
-    # just a little helper function
-    def make_lambda(function, *args, **kwargs):
-        '''Makes a static lambda fuction for some input.'''
-        return lambda: function(*args, **kwargs)
 
     #----- Define Menu Structure -----
     def book_gen(go_up, user):
         '''Generates a list of book menu objects.'''
-        #TODO(incherre): Add functionality
-        return []
+        book_delete_options = []
+        books = BOOK_BOT.get_user_books(user)
+
+        for book in books:
+            temp_option = MenuItem('Delete "%s" by %s' % (book.get_title(), book.get_author_name()),
+                                   make_lambda(remove_book, book))
+            book_delete_options.append(temp_option)
+
+        return book_delete_options
 
     def user_gen(go_up):
         '''Generates a list of user menu objects.'''
-        user_names = ['John', 'Susan', 'Sam', 'Rory', 'Jo']
+        user_names = BOOK_BOT.get_user_names()
         user_menus = []
 
         for name in user_names:
-            remove_book_function = make_lambda(book_gen, go_up, name)
-            temp_remove_book = DynamicMenu('Remove one of ' + name + "'s books", remove_book_function, [go_up])
+            if not name in USERS:
+                USERS[name] = BOOK_BOT.get_user_info(name)
 
-            remove_books_function = make_lambda(remove_all_books, name)
-            temp_remove_books = MenuItem('Remove all of ' + name + "'s books", remove_books_function)
+            gen_book_function = make_lambda(book_gen, go_up, USERS[name])
+            temp_remove_book = DynamicMenu('Remove one of ' + name + "'s books",
+                                           gen_book_function, [go_up])
 
-            del_user_function = make_lambda(delete_user, name)
+            remove_books_function = make_lambda(remove_all_books, USERS[name])
+            temp_remove_books = MenuItem('Remove all of ' + name + "'s books",
+                                         remove_books_function)
+
+            del_user_function = make_lambda(delete_user, USERS[name])
             temp_del_user = MenuItem('Delete ' + name, del_user_function)
 
             temp_menu = HighLevelMenu(name, [temp_remove_book, temp_remove_books,
