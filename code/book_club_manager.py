@@ -1,4 +1,6 @@
 '''The main file for the book club program.'''
+import string
+
 import books_common
 import google_api
 
@@ -109,11 +111,26 @@ def make_lambda(function, *args, **kwargs):
     '''Makes a static lambda fuction for some input.'''
     return lambda: function(*args, **kwargs)
 
+#----- Adapted from the work of Peter Norvig at http://norvig.com/spell-correct.html -----
+def edits1(word, letters):
+    "All edits that are one edit away from `word`."
+    splits     = [(word[:i], word[i:])    for i in range(len(word) + 1)]
+    deletes    = [L + R[1:]               for L, R in splits if R]
+    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R)>1]
+    replaces   = [L + c + R[1:]           for L, R in splits if R for c in letters]
+    inserts    = [L + c + R               for L, R in splits for c in letters]
+    return set(deletes + transposes + replaces + inserts)
+
+def edits2(word, letters):
+    "All edits that are two edits away from `word`."
+    return set(e2 for e1 in edits1(word, letters) for e2 in edits1(e1, letters))
+#----- End adapted spell check code
+
 if __name__ == '__main__':
     #----- Initialization -----
     CRED_PATH = './creds/book-selector-key.json'
     CLINT_SECRET_PATH = './creds/book-selector-userauth-key.json'
-    APP_NAME = 'Book Club'
+    APP_NAME = 'Test Book Club'
     CRED_NAME = 'bc-creds.json'
     SCRIPT_ID = 'MnjtpoV6LOWSqGbn-qvMxHji8zG_MrsiO'
 
@@ -155,8 +172,71 @@ if __name__ == '__main__':
 
     def add_new_user():
         '''Adds a new user.'''
-        print('new user added')
-        #TODO(incherre): Add functionality
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            user_names = BOOK_BOT.get_user_names()
+        except possible_errors:
+            print('Failed to retrieve list of existing users')
+            print('User creation can not proceed')
+            return
+
+        allowable_chars = string.ascii_letters + string.digits + '_-'
+        valid = False
+        while not valid:
+            new_user_name = input("Enter the new user's username: ").strip()
+
+            valid = True
+            for char in new_user_name:
+                if not char in allowable_chars:
+                    valid = False
+                    print('"%s" is not allowed in usernames' % (char))
+
+            if valid: #don't check this if it's already been invalidated
+                check_name = new_user_name.lower()
+                one_edit = edits1(check_name, allowable_chars)
+                two_edits = edits2(check_name, allowable_chars)
+                for name in user_names:
+                    l_name = name.lower()
+                    if l_name == check_name or l_name in one_edit or l_name in two_edits:
+                        valid = False
+                        print('New username, %s, too similar' % (check_name),
+                              'to existing username %s' % (name))
+
+        valid = False
+        while not valid:
+            new_user_email = input("Enter the new user's email address: ").strip()
+
+            split_email = new_user_email.split('@')
+            if len(split_email) < 2:
+                print('Malformed email address')
+            else:
+                split_domain = split_email[-1].split('.')
+                if len(split_domain) < 2:
+                    print('Malformed email adddress')
+                else:
+                    valid = True
+
+        try:
+            new_user = BOOK_BOT.create_user(new_user_name, new_user_email)
+        except possible_errors:
+            print('Failed to create user')
+            return
+        else:
+            print('User created')
+
+        subject = 'Welcome to %s' % (APP_NAME)
+        body = 'You have been created an account for %s.\n' % (APP_NAME)
+        body += 'Your username is %s.\n' % (new_user_name)
+        body += 'The link to your book input form is %s.\n' % (new_user.get_form_link())
+
+        try:
+            BOOK_BOT.send_email(new_user_email, subject, body)
+        except possible_errors:
+            print('Failed to send account details to the user\'s email')
+        else:
+            print('Account details emailed')
 
     def view_history():
         '''Displays the history.'''
