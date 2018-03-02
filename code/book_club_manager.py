@@ -126,13 +126,59 @@ def edits2(word, letters):
     return set(e2 for e1 in edits1(word, letters) for e2 in edits1(e1, letters))
 #----- End adapted spell check code
 
+def get_conf(file_name):
+    try:
+        f = open(file_name)
+    except IOError:
+        print('Unable to open configuration file')
+        return None
+
+    conf = {}
+    for line in f:
+        if line and line[0] != '#':
+            fields = line.strip().split(' : ')
+            if len(fields) == 2:
+                conf[fields[0]] = fields[1]
+            else:
+                print('Malformed configuration: %s' % line)
+
+    f.close()
+    return conf
+
 if __name__ == '__main__':
     #----- Initialization -----
-    CRED_PATH = './creds/book-selector-key.json'
-    CLINT_SECRET_PATH = './creds/book-selector-userauth-key.json'
-    APP_NAME = 'Test Book Club'
-    CRED_NAME = 'bc-creds.json'
-    SCRIPT_ID = 'MnjtpoV6LOWSqGbn-qvMxHji8zG_MrsiO'
+    CONF = get_conf('./book-club.conf')
+    print(str(CONF))
+
+    if 'CRED_PATH' in CONF:
+        CRED_PATH = CONF['CRED_PATH']
+    else:
+        print('Missing configuration: CRED_PATH')
+        exit()
+
+    if 'CLINT_SECRET_PATH' in CONF:
+        CLINT_SECRET_PATH = CONF['CLINT_SECRET_PATH']
+    else:
+        print('Missing configuration: CLINT_SECRET_PATH')
+        exit()
+
+    if 'APP_NAME' in CONF:
+        APP_NAME = CONF['APP_NAME']
+    else:
+        print('Missing configuration: APP_NAME')
+        exit()
+
+    if 'CRED_NAME' in CONF:
+        CRED_NAME = CONF['CRED_NAME']
+    else:
+        print('Missing configuration: CRED_NAME')
+        exit()
+
+    if 'SCRIPT_ID' in CONF:
+        SCRIPT_ID = CONF['SCRIPT_ID']
+    else:
+        print('Missing configuration: SCRIPT_ID')
+        exit()
 
     BOOK_BOT = google_api.GoogleDocsBot(CRED_PATH, CLINT_SECRET_PATH,
                                         CRED_NAME, SCRIPT_ID)
@@ -150,15 +196,16 @@ if __name__ == '__main__':
             current_poll = BOOK_BOT.get_current_poll()
         except possible_errors:
             print('Failed to retrieve current poll')
+            return
+
+        if current_poll is None:
+            print('There is no currently active poll')
         else:
-            if current_poll is None:
-                print('There is no currently active poll')
-            else:
-                print('Current Poll:')
-                print(' Date created: %s' % (current_poll.get_date().get_string_date()))
-                print(' Options:')
-                for book in current_poll.get_options():
-                    print('  "%s" by %s' % (book.get_title(), book.get_author_name()))
+            print('Current Poll:')
+            print(' Date created: %s' % (current_poll.get_date().get_string_date()))
+            print(' Options:')
+            for book in current_poll.get_options():
+                print('  "%s" by %s' % (book.get_title(), book.get_author_name()))
 
     def start_new_poll():
         '''Deletes the old poll and begins a new poll.'''
@@ -167,8 +214,31 @@ if __name__ == '__main__':
 
     def close_poll():
         '''Stops the current poll from accepting new responses.'''
-        print('poll closed')
-        #TODO(incherre): Add functionality
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            current_poll = BOOK_BOT.get_current_poll()
+        except possible_errors:
+            print('Failed to retrieve current poll')
+            return False
+
+        try:
+            current_poll.delete()
+        except possible_errors:
+            print('Failed to remove the poll')
+            return False
+        else:
+            print('Closed the current poll')
+            return True
+
+    def select_winner():
+        '''Closes a poll and selects a winner. Emails the winner to everyone.'''
+        if not close_poll():
+            return
+
+        print('winner selected')
+        #TODO(incherre): Complete functionality
 
     def add_new_user():
         '''Adds a new user.'''
@@ -234,7 +304,7 @@ if __name__ == '__main__':
         try:
             BOOK_BOT.send_email(new_user_email, subject, body)
         except possible_errors:
-            print('Failed to send account details to the user\'s email')
+            print("Failed to send account details to the user's email")
         else:
             print('Account details emailed')
 
@@ -247,7 +317,7 @@ if __name__ == '__main__':
             history = BOOK_BOT.get_history()
         except possible_errors:
             print('Failed to retrieve history')
-            histroy = []
+            history = []
 
         for record in history:
             print('%s: "%s" by %s %s' % tuple(record))
