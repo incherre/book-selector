@@ -148,7 +148,6 @@ def get_conf(file_name):
 if __name__ == '__main__':
     #----- Initialization -----
     CONF = get_conf('./book-club.conf')
-    print(str(CONF))
 
     if 'CRED_PATH' in CONF:
         CRED_PATH = CONF['CRED_PATH']
@@ -337,8 +336,16 @@ if __name__ == '__main__':
 
     def remove_all_books(user):
         '''Removes all the books of a user.'''
-        #TODO(incherre): Add functionality
-        print(user.get_user_name() + "'s books removed")
+        possible_errors = (TypeError,
+                           google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            BOOK_BOT.remove_all_books(user)
+        except possible_errors:
+            print('Book deletion failed')
+        else:
+            print(user.get_user_name() + "'s books removed")
 
     def remove_book(book):
         '''Removes the book from the records.'''
