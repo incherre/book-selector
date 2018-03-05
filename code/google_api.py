@@ -400,7 +400,7 @@ class GoogleDocsBot(books_common.DataIO):
             user_info = user_table[username]
 
         if len(user_info) >= self.user_sheet_width:
-            return books_common.User(user_info[0], user_info[1], [], user_info[2])
+            return books_common.User(user_info[0], user_info[1], [], user_info[2], self)
 
         return user_info
 
@@ -523,7 +523,7 @@ class GoogleDocsBot(books_common.DataIO):
         self.cache.set_value(self.user_table, temp_user_table)
         #end updating cache code
 
-        return books_common.User(username, user_email, [], userform_dict['form_url'])
+        return books_common.User(username, user_email, [], userform_dict['form_url'], self)
 
     def remove_book(self, book):
         '''Deletes a book from a user's remote list.'''
@@ -540,7 +540,30 @@ class GoogleDocsBot(books_common.DataIO):
             body=delbook_function, scriptId=self.script_id)
         delbook_response = try_request_n_retries(delbook_request, self.max_retries)
 
-        return True
+        return not 'error' in delbook_response
+
+    def remove_all_books(self, user):
+        '''Deletes all the books from a user's remote list.'''
+
+        books = user.get_books()
+
+        if not books:
+            return True
+
+        loc = books[0].location
+        if not isinstance(loc, FormLocation):
+            raise TypeError('Provided book has an incompatible location type.')
+
+        form_id = loc.get_form_id()
+
+        delbooks_function = {"function": "delAllResponses", "parameters": [form_id]}
+        delbooks_request = self.service.appsscript().scripts().run(
+            body=delbooks_function, scriptId=self.script_id)
+        delbooks_response = try_request_n_retries(delbooks_request, self.max_retries)
+
+        user.replace_books([])
+
+        return not 'error' in delbooks_response
 
     def add_winner(self, book):
         '''Adds a winner to the history file.'''

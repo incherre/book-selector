@@ -45,6 +45,9 @@ class BaseDataIOWithoutErrorInit(books_common.DataIO):
     def remove_book(self, book):
         return super().remove_book(book)
 
+    def remove_all_books(self, user):
+        return super().remove_all_books(user)
+
     def send_email(self, destination_address, subject, body):
         return super().send_email(destination_address, subject, body)
 
@@ -223,40 +226,46 @@ class TestUserMethods(unittest.TestCase):
         self.t_userEmail = "an.email@example.com"
         self.t_books = [abook]
         self.t_formLink = "www.example.com"
+        self.t_data_io = BaseDataIOWithoutErrorInit()
 
-        self.t_user = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink)
+        self.t_user = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink, self.t_data_io)
 
     def tearDown(self):
         del self.t_userName
         del self.t_userEmail
         del self.t_books
         del self.t_formLink
+        del self.t_data_io
 
         del self.t_user
 
     def test_init(self):
-        testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink)
+        testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink, self.t_data_io)
         self.assertIsInstance(testVar, books_common.User)
 
     def test_init_fail_invalid_userName(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(None, self.t_userEmail, self.t_books, self.t_formLink)
+            testVar = books_common.User(None, self.t_userEmail, self.t_books, self.t_formLink, self.t_data_io)
 
     def test_init_fail_invalid_userEmail(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink)
+            testVar = books_common.User(self.t_userName, None, self.t_books, self.t_formLink, self.t_data_io)
 
     def test_init_fail_no_books(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, self.t_userEmail, None, self.t_formLink)
+            testVar = books_common.User(self.t_userName, self.t_userEmail, None, self.t_formLink, self.t_data_io)
 
     def test_init_fail_bad_books(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, self.t_userEmail, [None], self.t_formLink)
+            testVar = books_common.User(self.t_userName, self.t_userEmail, [None], self.t_formLink, self.t_data_io)
 
     def test_init_fail_invalid_formLink(self):
         with self.assertRaises(TypeError):
-            testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, None)
+            testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, None, self.t_data_io)
+
+    def test_init_fail_no_dataio(self):
+        with self.assertRaises(TypeError):
+            testVar = books_common.User(self.t_userName, self.t_userEmail, self.t_books, self.t_formLink, None)
 
     def test_get_books(self):
         maybe_books = self.t_user.get_books()

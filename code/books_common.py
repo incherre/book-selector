@@ -68,7 +68,7 @@ class Book:
 class User:
     '''A class representing a book club participant.'''
 
-    def __init__(self, user_name, user_email, books, form_link):
+    def __init__(self, user_name, user_email, books, form_link, data_io):
         if isinstance(user_name, str):
             self.user_name = user_name
         else:
@@ -90,8 +90,16 @@ class User:
         else:
             raise TypeError("Provided link to form not a string.")
 
+        if isinstance(data_io, DataIO):
+            self.data_io = data_io
+        else:
+            raise TypeError("Provided data io interface not a DataIO object.")
+
     def get_books(self):
         '''Returns the list of books suggested by this user.'''
+        if not self.books:
+            self.data_io.get_user_books(self)
+
         return self.books
 
     def get_user_name(self):
@@ -262,53 +270,58 @@ class DataIO(ABC):
     @abstractmethod
     def get_user_names(self):
         '''Abstract method. Returns a list of user names.'''
-        raise NotImplementedError('Abstract method "getUserNames" not implemented')
+        raise NotImplementedError('Abstract method "get_user_names" not implemented')
 
     @abstractmethod
     def get_user_info(self, username):
         '''Abstract method. Returns a populated (except for the books) User object.'''
-        raise NotImplementedError('Abstract method "getUserInfo" not implemented')
+        raise NotImplementedError('Abstract method "get_user_info" not implemented')
 
     @abstractmethod
     def get_user_books(self, user):
         '''Abstract method. Returns the list of books that belong to a user.
         Also updates the user object's books.'''
-        raise NotImplementedError('Abstract method "getUserBooks" not implemented')
+        raise NotImplementedError('Abstract method "get_user_books" not implemented')
 
     @abstractmethod
     def get_history(self):
         '''Abstract method. Returns the list of books that have won in the past.'''
-        raise NotImplementedError('Abstract method "getHistory" not implemented')
+        raise NotImplementedError('Abstract method "get_history" not implemented')
 
     @abstractmethod
     def get_current_poll(self):
         '''Abstract method. Returns the ongoing poll.'''
-        raise NotImplementedError('Abstract method "getCurrentPoll" not implemented')
+        raise NotImplementedError('Abstract method "get_current_poll" not implemented')
 
     @abstractmethod
     def create_user(self, username, user_email):
         '''Abstract method. Creates a new user and returns it.'''
-        raise NotImplementedError('Abstract method "createUser" not implemented')
+        raise NotImplementedError('Abstract method "create_user" not implemented')
 
     @abstractmethod
     def remove_book(self, book):
         '''Abstract method. Deletes a book, wherever it is stored.'''
-        raise NotImplementedError('Abstract method "removeBook" not implemented')
+        raise NotImplementedError('Abstract method "remove_book" not implemented')
+
+    @abstractmethod
+    def remove_all_books(self, user):
+        '''Abstract method. Deletes all user's books wherever it is stored.'''
+        raise NotImplementedError('Abstract method "remove_all_books" not implemented')
 
     @abstractmethod
     def new_poll(self, options):
         '''Abstract method. Creates a new poll.'''
-        raise NotImplementedError('Abstract method "newPoll" not implemented')
+        raise NotImplementedError('Abstract method "new_poll" not implemented')
 
     @abstractmethod
     def close_poll(self, poll):
         '''Abstract method. Stops a poll from accepting new responses.'''
-        raise NotImplementedError('Abstract method "closePoll" not implemented')
+        raise NotImplementedError('Abstract method "close_poll" not implemented')
 
     @abstractmethod
     def add_winner(self, book):
         '''Abstract method. Adds a book to the winner history.'''
-        raise NotImplementedError('Abstract method "addWinner" not implemented')
+        raise NotImplementedError('Abstract method "add_winner" not implemented')
 
     @abstractmethod
     def send_email(self, destination_address, subject, body):
