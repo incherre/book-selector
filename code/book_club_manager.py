@@ -1,5 +1,6 @@
 '''The main file for the book club program.'''
 import string
+import time
 
 import books_common
 import google_api
@@ -220,24 +221,100 @@ if __name__ == '__main__':
             current_poll = BOOK_BOT.get_current_poll()
         except possible_errors:
             print('Failed to retrieve current poll')
-            return False
+            return
+
+        try:
+            current_poll.close_voting()
+        except possible_errors:
+            print('Failed to close the poll')
+        else:
+            print('Closed the current poll')
+
+    def select_winner():
+        '''Closes a poll and selects a winner. Emails the winner to everyone.'''
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            current_poll = BOOK_BOT.get_current_poll()
+        except possible_errors:
+            print('Failed to retrieve current poll')
+            return
+
+        try:
+            current_poll.close_voting()
+        except possible_errors:
+            print('Failed to close the poll')
+            return
+        else:
+            print('Closed the current poll')
+
+        time.sleep(.5)
+
+        try:
+            current_poll.update_results()
+        except possible_errors:
+            print('Failed to update the poll results')
+            return
+
+        winner = current_poll.get_winner()
+        print('Winner selected: "%s" by %s' % (winner.get_title(), winner.get_author_name()))
+
+        try:
+            BOOK_BOT.add_winner(winner)
+        except possible_errors:
+            print('Failed to add book to the history')
+            return
+        else:
+            print('Added book to history')
+
+        try:
+            winner.delete()
+        except possible_errors:
+            print("Failed to delete the winner from its owner's booklist")
+        else:
+            print("Deleted the winner from its owner's booklist")
+
+        print('Emailing book club members the result.')
+        today = time.strftime('%Y/%m/%d')
+        subject = '%s winner announcement' % (APP_NAME)
+        body = 'The winner of the book poll closed on %s is:\n' % (today)
+        body += '"%s" by %s' % (winner.get_title(), winner.get_author_name())
+
+        try:
+            user_names = BOOK_BOT.get_user_names()
+        except possible_errors:
+            print('Failed to retrieve list of users')
+            return
+
+        fail_count = 0
+
+        for name in user_names:
+            valid_user = True
+            if not name in USERS:
+                try:
+                    USERS[name] = BOOK_BOT.get_user_info(name)
+                except possible_errors:
+                    print("Failed to retrieve %s's info" % (name))
+                    valid_user = False
+                    fail_count += 1
+
+            if valid_user:
+                try:
+                    BOOK_BOT.send_email(USERS[name].get_user_email(), subject, body)
+                except possible_errors:
+                    print('Failed to email %s' % (name))
+                    fail_count += 1
+
+        percent = 100 * (1 - (fail_count / len(user_names)))
+        print('%4.1f%% of users emailed successfully' % (percent))
 
         try:
             current_poll.delete()
         except possible_errors:
-            print('Failed to remove the poll')
-            return False
+            print('Failed to delete the poll')
         else:
-            print('Closed the current poll')
-            return True
-
-    def select_winner():
-        '''Closes a poll and selects a winner. Emails the winner to everyone.'''
-        if not close_poll():
-            return
-
-        print('winner selected')
-        #TODO(incherre): Complete functionality
+            print('Deleted the poll')
 
     def add_new_user():
         '''Adds a new user.'''
@@ -424,6 +501,7 @@ if __name__ == '__main__':
     VIEW_POLL = MenuItem('View poll info', view_poll_info)
     START_POLL = MenuItem('Start a new poll', start_new_poll)
     END_POLL = MenuItem('Close the current poll', close_poll)
+    SELECT_WINNER = MenuItem('Select a winner for the current poll', select_winner)
     NEW_USER = MenuItem('Add a new user', add_new_user)
     HISTORY = MenuItem('View history', view_history)
     RETURN_TL = MenuItem('Go back', lambda: None)
@@ -433,8 +511,8 @@ if __name__ == '__main__':
     EXIT_OPTION = MenuItem('Exit', exit)
 
     TOP_LEVEL = HighLevelMenu('The Book Club', [VIEW_POLL, START_POLL, END_POLL,
-                                                NEW_USER, USER_OPTION, HISTORY,
-                                                EXIT_OPTION])
+                                                SELECT_WINNER, NEW_USER, USER_OPTION,
+                                                HISTORY, EXIT_OPTION])
     #----- End Define Menu Structure -----
 
     while True:

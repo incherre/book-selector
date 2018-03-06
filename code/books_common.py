@@ -242,7 +242,7 @@ class Poll:
         self.scores = current_poll.scores
 
         if hasattr(self, 'winner'):
-            del self.winner
+            self.winner = None
 
     def delete(self):
         '''Removes this poll from the database.'''
