@@ -1,6 +1,7 @@
 '''The main file for the book club program.'''
 import string
 import time
+import random
 
 import books_common
 import google_api
@@ -180,6 +181,16 @@ if __name__ == '__main__':
         print('Missing configuration: SCRIPT_ID')
         exit()
 
+    if 'OPTION_NUM' in CONF:
+        try:
+            OPTION_NUM = int(CONF['OPTION_NUM'])
+        except ValueError:
+            print('Invalid configuration: OPTION_NUM')
+            exit()
+    else:
+        print('Missing configuration: OPTION_NUM')
+        exit()
+
     BOOK_BOT = google_api.GoogleDocsBot(CRED_PATH, CLINT_SECRET_PATH,
                                         CRED_NAME, SCRIPT_ID)
 
@@ -207,10 +218,88 @@ if __name__ == '__main__':
             for book in current_poll.get_options():
                 print('  "%s" by %s' % (book.get_title(), book.get_author_name()))
 
+    def continue_with_user(user_name):
+        '''Asks the admin if they want to continue with a poll despite an issue.'''
+        select_str = 'Continue with poll creation without considering %s? (y/n)'
+        select_str = select_str % (user_name)
+        res = ''
+        while not res or (res[0] != 'y' and res[0] != 'n'):
+            res = input(select_str).lower()
+
+        return res[0] == 'y'
+
     def start_new_poll():
         '''Deletes the old poll and begins a new poll.'''
-        print('new poll started')
-        #TODO(incherre): Add functionality
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            user_names = BOOK_BOT.get_user_names()
+        except possible_errors:
+            print('Failed to retrieve list of users')
+            return
+
+        users_with_books = []
+        for name in user_names:
+            valid_user = True
+            if not name in USERS:
+                try:
+                    USERS[name] = BOOK_BOT.get_user_info(name)
+                except possible_errors:
+                    print("Failed to retrieve %s's info" % (name))
+                    if not continue_with_user(name):
+                        print('Poll creation suspended')
+                        return
+
+                    valid_user = False
+
+            if valid_user:
+                try:
+                    if BOOK_BOT.get_user_books(USERS[name]):
+                        users_with_books.append(USERS[name])
+                except possible_errors:
+                    print("Failed to retrieve %s's books" % (name))
+                    if not continue_with_user(name):
+                        print('Poll creation suspended')
+                        return
+
+        if len(users_with_books) < OPTION_NUM:
+            print('Not enough users with books to create a poll')
+            return
+
+        try:
+            history = BOOK_BOT.get_history()
+        except possible_errors:
+            print('Failed to retrieve history')
+            return
+        hist_set = set()
+        for r in history:
+            hist_set.add((r[1], r[2], r[3]))
+
+        options = []
+        users_with_books.sort(key=lambda user: user.get_num_books())
+        for user in users_with_books:
+            books = user.get_books()
+            selection = None
+
+            #TODO(incherre): greedily select another valid book, must not be in options or hist_set
+
+            if selection:
+                options.append(selection)
+
+            if len(options) == OPTION_NUM:
+                break
+
+        if len(options) < OPTION_NUM:
+            print('Not enough unique books found for a poll')
+            return
+
+        try:
+            BOOK_BOT.new_poll(options)
+        except possible_errors:
+            print('Poll creation failed')
+        else:
+            print('New poll started')
 
     def close_poll():
         '''Stops the current poll from accepting new responses.'''
