@@ -228,6 +228,44 @@ if __name__ == '__main__':
 
         return res[0] == 'y'
 
+    def select_valid_books(users, number):
+        '''Selects number books, max one per user, not already selected or appearing in history.'''
+        try:
+            history = BOOK_BOT.get_history()
+        except possible_errors:
+            print('Failed to retrieve history')
+            return []
+        not_allowed_set = set()
+        for r in history:
+            not_allowed_set.add((r[1], r[2], r[3]))
+
+        options = []
+        users.sort(key=lambda user: user.get_num_books())
+        for user in users:
+            books = user.get_books().copy()
+            selection = None
+            sel_id = None
+
+            #greedily select another valid book, must not be in options or history
+            while not selection and books:
+                possible = random.choice(books)
+                bk_id = (possible.get_title(), possible.get_author_first_name(),
+                         possible.get_author_last_name())
+                if not bk_id in not_allowed_set:
+                    selection = possible
+                    sel_id = bk_id
+                else:
+                    books.remove(possible)
+
+            if selection:
+                options.append(selection)
+                not_allowed_set.add(sel_id)
+
+        if len(options) <= number:
+            return options
+
+        return random.sample(options, number)
+
     def start_new_poll():
         '''Deletes the old poll and begins a new poll.'''
         possible_errors = (google_api.errors.HttpError,
@@ -267,28 +305,7 @@ if __name__ == '__main__':
             print('Not enough users with books to create a poll')
             return
 
-        try:
-            history = BOOK_BOT.get_history()
-        except possible_errors:
-            print('Failed to retrieve history')
-            return
-        hist_set = set()
-        for r in history:
-            hist_set.add((r[1], r[2], r[3]))
-
-        options = []
-        users_with_books.sort(key=lambda user: user.get_num_books())
-        for user in users_with_books:
-            books = user.get_books()
-            selection = None
-
-            #TODO(incherre): greedily select another valid book, must not be in options or hist_set
-
-            if selection:
-                options.append(selection)
-
-            if len(options) == OPTION_NUM:
-                break
+        options = select_valid_books(users_with_books, OPTION_NUM)
 
         if len(options) < OPTION_NUM:
             print('Not enough unique books found for a poll')
