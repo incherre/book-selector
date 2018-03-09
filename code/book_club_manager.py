@@ -149,52 +149,83 @@ def get_conf(file_name):
 
 if __name__ == '__main__':
     #----- Initialization -----
+    USERS = {}
+
     CONF = get_conf('./book-club.conf')
+    if not CONF:
+        print('Error opening configuration file')
+        input('Press enter to exit')
+        exit()
+
+    INCORRECT_CONF = False
 
     if 'CRED_PATH' in CONF:
         CRED_PATH = CONF['CRED_PATH']
     else:
         print('Missing configuration: CRED_PATH')
-        exit()
+        INCORRECT_CONF = True
 
     if 'CLINT_SECRET_PATH' in CONF:
         CLINT_SECRET_PATH = CONF['CLINT_SECRET_PATH']
     else:
         print('Missing configuration: CLINT_SECRET_PATH')
-        exit()
+        INCORRECT_CONF = True
 
     if 'APP_NAME' in CONF:
         APP_NAME = CONF['APP_NAME']
     else:
         print('Missing configuration: APP_NAME')
-        exit()
+        INCORRECT_CONF = True
 
     if 'CRED_NAME' in CONF:
         CRED_NAME = CONF['CRED_NAME']
     else:
         print('Missing configuration: CRED_NAME')
-        exit()
+        INCORRECT_CONF = True
 
     if 'SCRIPT_ID' in CONF:
         SCRIPT_ID = CONF['SCRIPT_ID']
     else:
         print('Missing configuration: SCRIPT_ID')
-        exit()
+        INCORRECT_CONF = True
 
     if 'OPTION_NUM' in CONF:
         try:
             OPTION_NUM = int(CONF['OPTION_NUM'])
         except ValueError:
             print('Invalid configuration: OPTION_NUM')
-            exit()
+            INCORRECT_CONF = True
     else:
         print('Missing configuration: OPTION_NUM')
+        INCORRECT_CONF = True
+
+    if INCORRECT_CONF:
+        input('Press enter to exit')
         exit()
 
     BOOK_BOT = google_api.GoogleDocsBot(CRED_PATH, CLINT_SECRET_PATH,
                                         CRED_NAME, SCRIPT_ID)
 
-    USERS = {}
+    book_club_exists = False
+    try:
+        sheet_id = BOOK_BOT.get_book_club_info_sheet_id()
+    except google_api.SpreadsheetFormatError:
+        book_club_exists = False
+    except (google_api.errors.HttpError, google_api.AppsScriptError):
+        print('Failure during the check for existing book club structure')
+        input('Press enter to exit')
+        exit()
+    else:
+        book_club_exists = True
+
+    if not book_club_exists:
+        print('No book club found: running first-time setup')
+        try:
+            BOOK_BOT.make_new_book_club()
+        except (google_api.errors.HttpError, google_api.AppsScriptError):
+            print('First-time setup failed')
+            input('Press enter to exit')
+            exit()
     #----- End Initialization -----
 
     #----- External Functionality -----
@@ -230,6 +261,9 @@ if __name__ == '__main__':
 
     def select_valid_books(users, number):
         '''Selects number books, max one per user, not already selected or appearing in history.'''
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
         try:
             history = BOOK_BOT.get_history()
         except possible_errors:
@@ -616,7 +650,7 @@ if __name__ == '__main__':
     RETURN_USER.set_higher(USER_OPTION)
     EXIT_OPTION = MenuItem('Exit', exit)
 
-    TOP_LEVEL = HighLevelMenu('The Book Club', [VIEW_POLL, START_POLL, END_POLL,
+    TOP_LEVEL = HighLevelMenu(APP_NAME, [VIEW_POLL, START_POLL, END_POLL,
                                                 SELECT_WINNER, NEW_USER, USER_OPTION,
                                                 HISTORY, EXIT_OPTION])
     #----- End Define Menu Structure -----

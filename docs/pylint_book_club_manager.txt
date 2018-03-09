@@ -1,0 +1,40 @@
+************* Module book_club_manager
+C:119, 0: Exactly one space required before assignment
+    splits     = [(word[:i], word[i:])    for i in range(len(word) + 1)]
+               ^ (bad-whitespace)
+C:120, 0: Exactly one space required before assignment
+    deletes    = [L + R[1:]               for L, R in splits if R]
+               ^ (bad-whitespace)
+C:121, 0: Exactly one space required around comparison
+    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R)>1]
+                                                                      ^ (bad-whitespace)
+C:122, 0: Exactly one space required before assignment
+    replaces   = [L + c + R[1:]           for L, R in splits if R for c in letters]
+               ^ (bad-whitespace)
+C:123, 0: Exactly one space required before assignment
+    inserts    = [L + c + R               for L, R in splits for c in letters]
+               ^ (bad-whitespace)
+C:654, 0: Wrong continued indentation (remove 7 spaces).
+                                                SELECT_WINNER, NEW_USER, USER_OPTION,
+                                         |      ^ (bad-continuation)
+C:655, 0: Wrong continued indentation (remove 7 spaces).
+                                                HISTORY, EXIT_OPTION])
+                                         |      ^ (bad-continuation)
+C:131, 0: Missing function docstring (missing-docstring)
+C:133, 8: Variable name "f" doesn't conform to snake_case naming style (invalid-name)
+C:209, 4: Constant name "book_club_exists" doesn't conform to UPPER_CASE naming style (invalid-name)
+C:211, 8: Constant name "sheet_id" doesn't conform to UPPER_CASE naming style (invalid-name)
+C:213, 8: Constant name "book_club_exists" doesn't conform to UPPER_CASE naming style (invalid-name)
+C:219, 8: Constant name "book_club_exists" doesn't conform to UPPER_CASE naming style (invalid-name)
+C:273,12: Variable name "r" doesn't conform to snake_case naming style (invalid-name)
+R:303, 4: Too many branches (13/12) (too-many-branches)
+R:373, 4: Too many branches (16/12) (too-many-branches)
+R:373, 4: Too many statements (63/50) (too-many-statements)
+R:459, 4: Too many local variables (17/15) (too-many-locals)
+R:459, 4: Too many branches (16/12) (too-many-branches)
+W:581,17: Unused argument 'go_up' (unused-argument)
+W:  6, 0: Unused import books_common (unused-import)
+
+------------------------------------------------------------------
+Your code has been rated at 9.54/10 (previous run: 9.41/10, +0.13)
+
