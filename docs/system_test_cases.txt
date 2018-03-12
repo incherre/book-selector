@@ -1,0 +1,81 @@
+Book Club Manager System Test Cases
+
+    These tests should be run after all the Google API credentials and the config file have been set up. The service account should have no files owned by it or shared with it, except the default welcome document provided by Google if applicable. The book club manager also creates some local files specified in the config file which should be removed prior to rerunning all tests. Many of these tests depend on tests earlier in the order, so it is recommended that the tests be ran in order.
+
+TC number: 1
+Description: Automatic first-time setup
+Preconditions: The service account is in a blank state as described above
+Actions: Run book_club_manager.py, allow account access when prompted
+Expected results: The program will direct your browser to a Google application authorization page. Upon authorizing and returning to the python program, it will print a message about running first time setup. Shortly afterwards it will display the main menu.
+
+TC number: 2
+Description: Attempt to view non-existent poll
+Preconditions: TC 1 has been run successfully, no poll has been created since
+Actions: Use the main menu to select 'View poll info'
+Expected results: The program will display a message indicating that no poll exists and return to the main menu.
+
+TC number: 3
+Description: Attempt to start a new poll with too few users
+Preconditions: TC 1 has been run successfully, no users have been created since
+Actions: Use the main menu to select 'Start a new poll'
+Expected results: The program will display a message indicating that there are not enough users for a poll and return to the main menu.
+
+TC number: 4
+Description: Attempt to close a non-existent poll
+Preconditions: TC 1 has been run successfully, no poll has been created since
+Actions: Use the main menu to select 'Close the current poll'
+Expected results: The program will display a message indicating that no poll exists and return to the main menu.
+
+TC number: 5
+Description: Attempt to select a winner for a non-existent poll
+Preconditions: TC 1 has been run successfully, no poll has been created since
+Actions: Use the main menu to select 'Select a winner for the current poll'
+Expected results: The program will display a message indicating that no poll exists and return to the main menu.
+
+TC number: 6
+Description: Attempt to view the list of users when there are none
+Preconditions: TC 1 has been run successfully, no users have been created since
+Actions: Use the main menu to select 'Manage users'
+Expected results: A sub-menu will be shown with only one option: 'Go back'.
+
+TC number: 7
+Description: Attempt to view history before any books have won
+Preconditions: TC 1 has been run successfully, no poll has been concluded since
+Actions: Use the main menu to select 'View history'
+Expected results: The program will display a message indicating that no history exists and return to the main menu.
+
+TC number: 8
+Description: Add a new user
+Preconditions: TC 1 has been run successfully
+Actions: Use the main menu to select 'Add a new user', follow prompts for user information
+Expected results: The program will display a message indicating that the new user has been created and return to the main menu. Also, an email will be sent to the provided email address containing the account details of the new user.
+
+TC number: 9
+Description: Manage a user
+Preconditions: TC 8 has been run successfully at least once, at least one user has not been deleted
+Actions: Use the main menu to select 'Manage users'
+Expected results: A sub-menu will be shown with one entry for each existing user and once entry for 'Go back'.
+
+TC number: 10
+Description: Attempt to remove a book from a user who has none
+Preconditions: TC 9, at least one user with no books exists
+Actions: Use the 'Manage users' sub-menu to select a user with no books, then select the option to remove one book
+Expected results: A sub-menu will be shown with only one option: 'Go back'.
+
+TC number: 11
+Description: Remove a book from a user
+Preconditions: TC 9, at least one user with books exists
+Actions: Use the 'Manage users' sub-menu to select a user with books, then select the option to remove one book, select a book
+Expected results: A message indicating the book has been deleted will appear, the selected book will not appear in that user's book list.
+
+TC number: 12
+Description: Remove all books from a user
+Preconditions: TC 9
+Actions: Use the 'Manage users' sub-menu to select a user, then select the option to remove all books
+Expected results: A message indicating that user's books have been removed will appear, that user's book list will be empty.
+
+TC number: 13
+Description: Delete user
+Preconditions: TC 9
+Actions: Use the 'Manage users' sub-menu to select a user, then select the option to delete that user
+Expected results: A message indicating that user has been deleted will appear. That user will not appear in the user list.
