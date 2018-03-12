@@ -3,7 +3,6 @@ import string
 import time
 import random
 
-import books_common
 import google_api
 
 class MenuItem:
@@ -116,11 +115,11 @@ def make_lambda(function, *args, **kwargs):
 #----- Adapted from the work of Peter Norvig at http://norvig.com/spell-correct.html -----
 def edits1(word, letters):
     "All edits that are one edit away from `word`."
-    splits     = [(word[:i], word[i:])    for i in range(len(word) + 1)]
-    deletes    = [L + R[1:]               for L, R in splits if R]
-    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R)>1]
-    replaces   = [L + c + R[1:]           for L, R in splits if R for c in letters]
-    inserts    = [L + c + R               for L, R in splits for c in letters]
+    splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+    deletes = [L + R[1:] for L, R in splits if R]
+    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1]
+    replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
+    inserts = [L + c + R for L, R in splits for c in letters]
     return set(deletes + transposes + replaces + inserts)
 
 def edits2(word, letters):
@@ -129,14 +128,15 @@ def edits2(word, letters):
 #----- End adapted spell check code
 
 def get_conf(file_name):
+    '''Makes a configuration dictionary out of a file.'''
     try:
-        f = open(file_name)
+        conf_file = open(file_name)
     except IOError:
         print('Unable to open configuration file')
         return None
 
     conf = {}
-    for line in f:
+    for line in conf_file:
         if line and line[0] != '#':
             fields = line.strip().split(' : ')
             if len(fields) == 2:
@@ -144,7 +144,7 @@ def get_conf(file_name):
             else:
                 print('Malformed configuration: %s' % line)
 
-    f.close()
+    conf_file.close()
     return conf
 
 if __name__ == '__main__':
@@ -206,19 +206,19 @@ if __name__ == '__main__':
     BOOK_BOT = google_api.GoogleDocsBot(CRED_PATH, CLINT_SECRET_PATH,
                                         CRED_NAME, SCRIPT_ID)
 
-    book_club_exists = False
+    BC_EXISTS = False
     try:
-        sheet_id = BOOK_BOT.get_book_club_info_sheet_id()
+        BOOK_BOT.get_book_club_info_sheet_id()
     except google_api.SpreadsheetFormatError:
-        book_club_exists = False
+        BC_EXISTS = False
     except (google_api.errors.HttpError, google_api.AppsScriptError):
         print('Failure during the check for existing book club structure')
         input('Press enter to exit')
         exit()
     else:
-        book_club_exists = True
+        BC_EXISTS = True
 
-    if not book_club_exists:
+    if not BC_EXISTS:
         print('No book club found: running first-time setup')
         try:
             BOOK_BOT.make_new_book_club()
@@ -270,8 +270,8 @@ if __name__ == '__main__':
             print('Failed to retrieve history')
             return []
         not_allowed_set = set()
-        for r in history:
-            not_allowed_set.add((r[1], r[2], r[3]))
+        for row in history:
+            not_allowed_set.add((row[1], row[2], row[3]))
 
         options = []
         users.sort(key=lambda user: user.get_num_books())
@@ -578,7 +578,7 @@ if __name__ == '__main__':
     #----- End External Functionality -----
 
     #----- Define Menu Structure -----
-    def book_gen(go_up, user):
+    def book_gen(user):
         '''Generates a list of book menu objects.'''
         possible_errors = (google_api.errors.HttpError,
                            google_api.AppsScriptError,
@@ -621,7 +621,7 @@ if __name__ == '__main__':
                     valid_user = False
 
             if valid_user:
-                gen_book_function = make_lambda(book_gen, go_up, USERS[name])
+                gen_book_function = make_lambda(book_gen, USERS[name])
                 temp_remove_book = DynamicMenu("Remove one of %s's books" % (name),
                                                gen_book_function, [go_up])
 
@@ -651,8 +651,8 @@ if __name__ == '__main__':
     EXIT_OPTION = MenuItem('Exit', exit)
 
     TOP_LEVEL = HighLevelMenu(APP_NAME, [VIEW_POLL, START_POLL, END_POLL,
-                                                SELECT_WINNER, NEW_USER, USER_OPTION,
-                                                HISTORY, EXIT_OPTION])
+                                         SELECT_WINNER, NEW_USER, USER_OPTION,
+                                         HISTORY, EXIT_OPTION])
     #----- End Define Menu Structure -----
 
     while True:
