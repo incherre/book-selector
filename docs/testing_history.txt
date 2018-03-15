@@ -1,0 +1,4 @@
+Testing history:
+
+2018/3/15 - Pass: TC 2, TC 3, TC 6, TC 8, TC 9, TC 10, TC 11, TC 12, TC 13, TC 15, TC 16, TC 17, TC 18, TC 19
+            Fail: TC 1, TC 4, TC 5, TC 7, TC 14
