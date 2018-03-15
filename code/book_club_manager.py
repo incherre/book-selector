@@ -274,7 +274,7 @@ if __name__ == '__main__':
             not_allowed_set.add((row[1], row[2], row[3]))
 
         options = []
-        users.sort(key=lambda user: user.get_num_books())
+        users.sort(key=lambda user: user.get_book_count())
         for user in users:
             books = user.get_books().copy()
             selection = None
