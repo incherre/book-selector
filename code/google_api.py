@@ -338,16 +338,10 @@ class GoogleDocsBot(books_common.DataIO):
             "sheets": [
                 {
                     "properties": {
-                        "title": self.info_spread_names[1],
-                        "index": 0
+                        "title": self.info_spread_names[i],
+                        "index": i - 1
                     }
-                },
-                {
-                    "properties": {
-                        "title": self.info_spread_names[2],
-                        "index": 1
-                    }
-                }
+                } for i in range(1, len(self.info_spread_names))
             ]
         }
         new_sheet_request = self.service.sheets().spreadsheets().create(body=spreadsheet_body)
