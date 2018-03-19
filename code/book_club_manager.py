@@ -381,6 +381,10 @@ if __name__ == '__main__':
             print('Failed to retrieve current poll')
             return
 
+        if current_poll is None:
+            print('There is no currently active poll')
+            return
+
         try:
             current_poll.close_voting()
         except possible_errors:
@@ -415,7 +419,7 @@ if __name__ == '__main__':
         else:
             print("Deleted the winner from its owner's booklist")
 
-        print('Emailing book club members the result.')
+        print('Emailing book club members the result')
         today = time.strftime('%Y/%m/%d')
         subject = '%s winner announcement' % (APP_NAME)
         body = 'The winner of the book poll closed on %s is:\n' % (today)
@@ -536,7 +540,7 @@ if __name__ == '__main__':
             history = []
 
         if not history:
-            print('No books have been added to the history.')
+            print('No books have been added to the history')
 
         for record in history:
             print('%s: "%s" by %s %s' % tuple(record))
