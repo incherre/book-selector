@@ -535,6 +535,9 @@ if __name__ == '__main__':
             print('Failed to retrieve history')
             history = []
 
+        if not history:
+            print('No books have been added to the history.')
+
         for record in history:
             print('%s: "%s" by %s %s' % tuple(record))
 
