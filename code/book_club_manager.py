@@ -363,6 +363,10 @@ if __name__ == '__main__':
             print('Failed to retrieve current poll')
             return
 
+        if current_poll is None:
+            print('There is no currently active poll')
+            return
+
         try:
             current_poll.close_voting()
         except possible_errors:
