@@ -300,11 +300,58 @@ if __name__ == '__main__':
 
         return random.sample(options, number)
 
+    def email_all_users(subject, body):
+        '''Emails every user the specified email.'''
+        possible_errors = (google_api.errors.HttpError,
+                           google_api.AppsScriptError,
+                           google_api.SpreadsheetFormatError)
+        try:
+            user_names = BOOK_BOT.get_user_names()
+        except possible_errors:
+            print('Failed to retrieve list of users')
+            return
+
+        fail_count = 0
+
+        for name in user_names:
+            valid_user = True
+            if not name in USERS:
+                try:
+                    USERS[name] = BOOK_BOT.get_user_info(name)
+                except possible_errors:
+                    print("Failed to retrieve %s's info" % (name))
+                    valid_user = False
+                    fail_count += 1
+
+            if valid_user:
+                try:
+                    BOOK_BOT.send_email(USERS[name].get_user_email(), subject, body)
+                except possible_errors:
+                    print('Failed to email %s' % (name))
+                    fail_count += 1
+
+        percent = 100 * (1 - (fail_count / len(user_names)))
+        print('%4.1f%% of users emailed successfully' % (percent))
+
     def start_new_poll():
         '''Deletes the old poll and begins a new poll.'''
         possible_errors = (google_api.errors.HttpError,
                            google_api.AppsScriptError,
                            google_api.SpreadsheetFormatError)
+        print('Checking for an old poll')
+        try:
+            current_poll = BOOK_BOT.get_current_poll()
+        except possible_errors:
+            current_poll = None
+
+        if not current_poll is None:
+            print('Attempting to delete old poll')
+            try:
+                current_poll.delete()
+            except possible_errors:
+                print('Failed to delete old poll')
+
+        print('Retrieving user info and selecting books')
         try:
             user_names = BOOK_BOT.get_user_names()
         except possible_errors:
@@ -345,12 +392,22 @@ if __name__ == '__main__':
             print('Not enough unique books found for a poll')
             return
 
+        print('Creating the poll')
         try:
-            BOOK_BOT.new_poll(options)
+            new_poll = BOOK_BOT.new_poll(options)
         except possible_errors:
             print('Poll creation failed')
+            return
         else:
             print('New poll started')
+
+        print('Emailing book club members the link to the new poll')
+        today = time.strftime('%Y/%m/%d')
+        subject = '%s new poll announcement' % (APP_NAME)
+        body = 'The link to the new poll created on %s is:\n' % (today)
+        body += '%s' % (new_poll.get_form_link())
+
+        email_all_users(subject, body)
 
     def close_poll():
         '''Stops the current poll from accepting new responses.'''
@@ -429,33 +486,7 @@ if __name__ == '__main__':
         body = 'The winner of the book poll closed on %s is:\n' % (today)
         body += '"%s" by %s' % (winner.get_title(), winner.get_author_name())
 
-        try:
-            user_names = BOOK_BOT.get_user_names()
-        except possible_errors:
-            print('Failed to retrieve list of users')
-            return
-
-        fail_count = 0
-
-        for name in user_names:
-            valid_user = True
-            if not name in USERS:
-                try:
-                    USERS[name] = BOOK_BOT.get_user_info(name)
-                except possible_errors:
-                    print("Failed to retrieve %s's info" % (name))
-                    valid_user = False
-                    fail_count += 1
-
-            if valid_user:
-                try:
-                    BOOK_BOT.send_email(USERS[name].get_user_email(), subject, body)
-                except possible_errors:
-                    print('Failed to email %s' % (name))
-                    fail_count += 1
-
-        percent = 100 * (1 - (fail_count / len(user_names)))
-        print('%4.1f%% of users emailed successfully' % (percent))
+        email_all_users(subject, body)
 
         try:
             current_poll.delete()

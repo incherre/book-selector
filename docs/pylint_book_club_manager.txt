@@ -1,10 +1,9 @@
 ************* Module book_club_manager
-R:303, 4: Too many branches (13/12) (too-many-branches)
-R:373, 4: Too many branches (16/12) (too-many-branches)
-R:373, 4: Too many statements (63/50) (too-many-statements)
-R:459, 4: Too many local variables (17/15) (too-many-locals)
-R:459, 4: Too many branches (16/12) (too-many-branches)
+R:336, 4: Too many branches (16/12) (too-many-branches)
+R:336, 4: Too many statements (54/50) (too-many-statements)
+R:498, 4: Too many local variables (17/15) (too-many-locals)
+R:498, 4: Too many branches (16/12) (too-many-branches)
 
 ------------------------------------------------------------------
-Your code has been rated at 9.89/10 (previous run: 9.54/10, +0.35)
+Your code has been rated at 9.92/10 (previous run: 9.89/10, +0.03)
 
