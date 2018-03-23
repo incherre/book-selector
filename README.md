@@ -40,7 +40,18 @@ General Information: https://developers.google.com/gsuite/marketplace/preparing
 27. There should be a new OAuth 2.0 client ID named "Apps Script", download the JSON using the button on the right and save it in the creds folder
 
 ### Setting up the config file
+1. Open your local book-club.conf in a text editor
+2. Change the CRED_PATH field to the path of the service account key file that you saved
+3. Change the CLINT_SECRET_PATH field to the path of the Apps Script OAuth token you saved
+4. Change the APP_NAME field to the name of your book club
+5. Change the SCRIPT_ID field to the API ID that you noted earlier
+6. Change the OPTION_NUM field to the number of options that you want in the monthly poll
+
+### Installing 
 TODO
 
 ### First run
-TODO
+1. Use python to run book_club_manager.py
+2. It should open your browser to an auth page, make sure you give access to the account that you'd like to be the admin account
+3. Wait while the application performs the first time setup
+4. The main menu should appear
