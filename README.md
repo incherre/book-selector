@@ -47,8 +47,12 @@ General Information: https://developers.google.com/gsuite/marketplace/preparing
 5. Change the SCRIPT_ID field to the API ID that you noted earlier
 6. Change the OPTION_NUM field to the number of options that you want in the monthly poll
 
-### Installing 
-TODO
+### Installing libraries
+This project requires the python libraries httplib2, google-api-python-client, oauth2client and (possibly) PyOpenSSL
+These all should be either already installed or easily installable with pip
+Misc. helpful pages:
+- https://developers.google.com/api-client-library/python/start/installation
+- http://gspread.readthedocs.io/en/latest/oauth2.html
 
 ### First run
 1. Use python to run book_club_manager.py
